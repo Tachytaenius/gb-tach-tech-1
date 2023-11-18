@@ -9,6 +9,7 @@ VBlankVector::
 	push af
 	ld a, 1
 	ldh [hVBlankFlag], a
+	ld a, HIGH(wShadowOAM)
 	call hOAMDMA
 	pop af
 	reti

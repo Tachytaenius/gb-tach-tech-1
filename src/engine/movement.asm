@@ -1,16 +1,22 @@
 INCLUDE "constants/joypad.inc"
 INCLUDE "constants/movement.inc"
+INCLUDE "constants/directions.inc"
 
 SECTION "Movement", ROM0
 
 ; This system could be improved with signed 3.12 velocity and acceleration, dropping the lower byte of velocity when adding velocity to position
 
-GetPlayerTargetVelocity::
+; Sets target velocity and direction
+ProcessPlayerInput::
+	; We load potential new direction into b
+	ld b, DIR_NONE
+
 	; x
 	; left
 	ldh a, [hJoypad.down]
 	and JOY_LEFT_MASK
 	jr z, .skipLeft
+	ld b, DIR_LEFT
 	ld a, -PLAYER_MAX_SPEED
 	jr .setX
 .skipLeft
@@ -18,6 +24,7 @@ GetPlayerTargetVelocity::
 	ldh a, [hJoypad.down]
 	and JOY_RIGHT_MASK
 	jr z, .skipRight
+	ld b, DIR_RIGHT
 	ld a, PLAYER_MAX_SPEED
 	jr .setX
 .skipRight
@@ -30,6 +37,7 @@ GetPlayerTargetVelocity::
 	ldh a, [hJoypad.down]
 	and JOY_UP_MASK
 	jr z, .skipUp
+	ld b, DIR_UP
 	ld a, -PLAYER_MAX_SPEED
 	jr .setY
 	; down
@@ -37,6 +45,7 @@ GetPlayerTargetVelocity::
 	ldh a, [hJoypad.down]
 	and JOY_DOWN_MASK
 	jr z, .skipDown
+	ld b, DIR_DOWN
 	ld a, PLAYER_MAX_SPEED
 	jr .setY
 .skipDown
@@ -44,6 +53,50 @@ GetPlayerTargetVelocity::
 .setY
 	ld [wPlayerTargetVelocity.y], a
 
+	; Handle direction
+	; Would be cool to have an option to prioritise new directions instead of old ones
+	ld a, b
+	cp DIR_NONE
+	ret z
+	ld a, [wPlayerDirection]
+	call DirectionToPad
+	ld c, a
+	ASSERT JOY_RIGHT_MASK | JOY_DOWN_MASK | JOY_LEFT_MASK | JOY_UP_MASK == %1111 
+	ldh a, [hJoypad.down] ; No need to filter this to the low nybble (joypad)
+	and c
+	ret nz ; Old direction still held, stick with it
+	ld a, b
+	ld [wPlayerDirection], a
+	ld a, 1
+	ld [wUpdatePlayerSprite], a
+	ret
+
+DirectionToPad::
+	and a
+	jr nz, :+
+	ASSERT DIR_RIGHT == 0
+	ld a, JOY_RIGHT_MASK
+	ret
+:
+	dec a
+	jr nz, :+
+	ASSERT DIR_DOWN == 1
+	ld a, JOY_DOWN_MASK
+	ret
+:
+	dec a
+	jr nz, :+
+	ASSERT DIR_LEFT == 2
+	ld a, JOY_LEFT_MASK
+	ret
+:
+	dec a
+	jr nz, :+
+	ASSERT DIR_UP == 3
+	ld a, JOY_UP_MASK
+	ret
+:
+	xor a
 	ret
 
 AcceleratePlayer::
@@ -204,22 +257,6 @@ AcceleratePlayer::
 	ret
 
 ApplyPlayerVelocity::
-	ld hl, wPlayerPosition.x
-	ld a, [hl+]
-	ld h, [hl]
-	ld l, a
-	ld a, [wPlayerVelocity.x]
-	; Add signed a into hl using a sign extended into bc
-	ld c, a
-	add a
-	sbc a
-	ld b, a
-	add hl, bc
-	ld a, l
-	ld [wPlayerPosition.x], a
-	ld a, h
-	ld [wPlayerPosition.x + 1], a
-	ASSERT wPlayerPosition.x + 2 == wPlayerPosition.y
 	ld hl, wPlayerPosition.y
 	ld a, [hl+]
 	ld h, [hl]
@@ -235,4 +272,20 @@ ApplyPlayerVelocity::
 	ld [wPlayerPosition.y], a
 	ld a, h
 	ld [wPlayerPosition.y + 1], a
+	ASSERT wPlayerPosition.y + 2 == wPlayerPosition.x
+	ld hl, wPlayerPosition.x
+	ld a, [hl+]
+	ld h, [hl]
+	ld l, a
+	ld a, [wPlayerVelocity.x]
+	; Add signed a into hl using a sign extended into bc
+	ld c, a
+	add a
+	sbc a
+	ld b, a
+	add hl, bc
+	ld a, l
+	ld [wPlayerPosition.x], a
+	ld a, h
+	ld [wPlayerPosition.x + 1], a
 	ret

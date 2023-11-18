@@ -9,5 +9,5 @@ LICENSEE := HB
 OLDLIC := 0x33
 MBC := 0x00
 SRAMSIZE := 0x00
-ROMNAME := tach-tech-1
+ROMNAME := tachy-tech-1
 ROMEXT  := gb

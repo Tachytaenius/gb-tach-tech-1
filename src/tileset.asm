@@ -1,7 +1,7 @@
 MACRO define_tile
 	DEF \1 RB
 	EXPORT \1
-	INCBIN STRCAT("assets/tiles/", \2, ".2bpp")
+	INCBIN STRCAT("assets/gfx/", \2, ".2bpp")
 ENDM
 
 MACRO define_tiles
@@ -11,7 +11,7 @@ FOR I, \3
 	EXPORT {SYMBOL_NAME}
 	PURGE SYMBOL_NAME
 ENDR
-	INCBIN STRCAT("assets/tiles/", \2, ".2bpp")
+	INCBIN STRCAT("assets/gfx/", \2, ".2bpp")
 ENDM
 
 SECTION "Tileset Graphics", ROM0
@@ -23,3 +23,4 @@ TilesetGraphics::
 .end::
 
 DEF NUM_TILES RB 0
+EXPORT NUM_TILES

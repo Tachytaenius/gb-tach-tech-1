@@ -25,16 +25,17 @@ Init::
 	ld bc, OAMDMASource.end - OAMDMASource
 	ld de, hOAMDMA
 	call CopyBytes
-	; Clear shadow OAM
-	ld hl, wShadowOAM
+	; Reset OAM index and clear shadow OAM
 	xor a
+	ld [hOAMIndex], a
+	ld hl, wShadowOAM
 	ld bc, wShadowOAM.end - wShadowOAM
 	call FillBytes
 	; Init OAM
 	call hOAMDMA
 
 	; Set palettes
-	ld a, %11100000
+	ld a, %11100100
 	ldh [rBGP], a
 	ldh [rOBP0], a
 
@@ -60,4 +61,5 @@ Init::
 	ld a, IEF_VBLANK
 	ldh [rIE], a
 
-	jp MainLoop
+	; Wait for VBlank for proper synchronisation of first main loop run
+	jp MainLoop.waitVBlank

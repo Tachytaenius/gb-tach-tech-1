@@ -22,7 +22,7 @@ RGBGFX  := ${RGBDS}rgbgfx
 ROM = bin/${ROMNAME}.${ROMEXT}
 
 # Argument constants
-INCDIRS  = src/include/
+INCDIRS  = src/include/ src/include/lib/
 WARNINGS = all extra
 ASFLAGS  = -p ${PADVALUE} $(addprefix -I,${INCDIRS}) $(addprefix -W,${WARNINGS})
 LDFLAGS  = -p ${PADVALUE}
@@ -57,7 +57,7 @@ VPATH := src
 
 # Define how to compress files using the PackBits16 codec.
 # (The compressor script requires Python 3.)
-assets/%.pb16: src/tools/pb16.py assets/%
+assets/%.pb16: tools/pb16.py assets/%
 	@${MKDIR_P} ${@D}
 	$^ $@
 

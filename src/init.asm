@@ -8,6 +8,8 @@ hGBCFlag::
 SECTION "Init", ROM0
 
 Init::
+	; Interrupts are disabled from Header
+
 	; Game Boy Colour?
 	cp $11
 	ld a, 1
@@ -19,6 +21,10 @@ Init::
 	; Initialise stack
 	ld sp, wStack.bottom
 	call StopLCD
+
+	; Set bank for anything that reads hCurBank before it is written to
+	ld a, 1
+	rst SwapBank
 
 	; Copy OAM DMA routine to HRAM
 	ld hl, OAMDMASource
@@ -61,5 +67,5 @@ Init::
 	ld a, IEF_VBLANK
 	ldh [rIE], a
 
-	; Wait for VBlank for proper synchronisation of first main loop run
+	; Wait for VBlank so that the first main loop run can have as much VBlank as the usual
 	jp MainLoop.waitVBlank

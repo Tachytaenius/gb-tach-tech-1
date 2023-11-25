@@ -1,0 +1,3 @@
+King KING
+standing
+walking

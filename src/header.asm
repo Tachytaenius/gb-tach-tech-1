@@ -3,6 +3,7 @@ INCLUDE "hardware.inc"
 
 SECTION "Header", ROM0[$100]
 
+Header::
 	di
 	jp Init
 

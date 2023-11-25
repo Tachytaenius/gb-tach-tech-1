@@ -1,0 +1,2 @@
+standing Standing STANDING 1 0
+walking Walking WALKING 4 16

@@ -1,5 +1,5 @@
 DEF PLAYER_ACCEL EQU 0.125q4
-DEF PLAYER_MAX_SPEED EQU 1.25q4
+DEF PLAYER_MAX_SPEED EQU 0.75q4
 
 ; Exact comparisons and values based on tests
 ASSERT PLAYER_ACCEL >= 0.0q4

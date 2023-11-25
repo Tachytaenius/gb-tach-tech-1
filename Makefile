@@ -19,6 +19,8 @@ RGBLINK := ${RGBDS}rgblink
 RGBFIX  := ${RGBDS}rgbfix
 RGBGFX  := ${RGBDS}rgbgfx
 
+LUA := lua
+
 ROM = bin/${ROMNAME}.${ROMEXT}
 
 # Argument constants
@@ -55,20 +57,6 @@ rebuild:
 # "Source" assets can thus be safely stored there without `make clean` removing them!
 VPATH := src
 
-# Define how to compress files using the PackBits16 codec.
-# (The compressor script requires Python 3.)
-assets/%.pb16: tools/pb16.py assets/%
-	@${MKDIR_P} ${@D}
-	$^ $@
-
-# Define how to convert graphics files
-assets/%.1bpp: assets/%.png
-	@mkdir -p $(@D)
-	$(RGBGFX) -d 1 -o $@ $<
-assets/%.2bpp: assets/%.png
-	@mkdir -p $(@D)
-	$(RGBGFX) -d 2 -o $@ $<
-
 # How to build a ROM.
 # Notice that the build date is always refreshed.
 bin/%.${ROMEXT}: $(patsubst src/%.asm,obj/%.o,${SRCS})
@@ -90,6 +78,37 @@ obj/%.mk: src/%.asm
 obj/%.o: obj/%.mk
 	@touch $@
 
+# Convert the animations from the file read by entity-gfx to one read by rgbasm
+assets/gfx/animations.inc: src/assets/gfx/animations.txt
+	@${MKDIR_P} ${@D}
+	${LUA} tools/entity-gfx.lua animations src/assets/gfx/animations.txt $@
+
+# Ensure that updating the pngs causes a rebuild of the graphics for that entity
+assets/gfx/entities/%/dependencies.mk: src/assets/gfx/entities/%/data.txt
+	@${MKDIR_P} ${@D}
+	${LUA} tools/entity-gfx.lua dependencies src/assets/gfx/animations.txt src/assets/gfx/entities/$* assets/gfx/entities/$*
+
+# Entity graphics conversions
+# Uses additional auto-generated dependencies in a mk file generated based on file contents
+assets/gfx/entities/%/include.inc assets/gfx/entities/%/graphics.2bpp: src/assets/gfx/entities/%/data.txt
+	@${MKDIR_P} ${@D}
+	${LUA} tools/entity-gfx.lua build src/assets/gfx/animations.txt src/assets/gfx/entities/$* assets/gfx/entities/$*
+
+# Define how to compress files using the PackBits16 codec.
+# (The compressor script requires Python 3.)
+assets/%.pb16: tools/pb16.py assets/%
+	@${MKDIR_P} ${@D}
+	$^ $@
+
+# Define how to convert graphics files that are used whole, not converted in specific ways by other tools
+assets/%.1bpp: src/assets/%.png
+	@${MKDIR_P} $(@D)
+	$(RGBGFX) -d 1 -o $@ $<
+assets/%.2bpp: src/assets/%.png
+	@${MKDIR_P} $(@D)
+	$(RGBGFX) -d 2 -o $@ $<
+
 ifeq ($(filter clean,${MAKECMDGOALS}),)
 include $(patsubst src/%.asm,obj/%.mk,${SRCS})
+include $(patsubst src/assets/gfx/entities/%/data.txt,assets/gfx/entities/%/dependencies.mk,$(wildcard src/assets/gfx/entities/*/data.txt))
 endif

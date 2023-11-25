@@ -1,33 +1,97 @@
 INCLUDE "hardware.inc"
 INCLUDE "constants/directions.inc"
 
-SECTION "Sprite Data", ROM0
-
-PlayerGraphics::
-	INCBIN "assets/gfx/player.2bpp"
-.end::
-
 SECTION "Sprite Management", ROM0
 
-Update2x2MetaspriteGraphics::
+StepEntityAnimation::
 	; TODO: Actual entity system
-	ld hl, PlayerGraphics
-	ld de, _VRAM8000 + NUM_TILES * 8*8*2/8
-	ld bc, 16*16*2/8
-
-	ld a, [wPlayerDirection]
-	ASSERT DIR_NONE == -1
-	inc a
-	jr z, .skip ; Was it -1?
-	dec a
-	jr z, .skip ; Is it 0 (no need to add to hl)?
-.loop
-	add hl, bc
+	ld de, wPlayerAnimation.type
+	ld a, [de]
+	ld hl, AnimationTypeTable
+	and a
+	jr z, .skip
+.loop ; Could probably do funky address stuff here if the Animation Type Table section is aligned
+	inc hl
+	inc hl
 	dec a
 	jr nz, .loop
 .skip
+	; Deref hl, but new hl is not meant as a pointer
+	ld a, [hl+]
+	ld h, [hl]
+	ld l, a
+	; l: frame count, h: animation speed
+	inc de
+	inc de
+	ASSERT wPlayerAnimation.type + 2 == wPlayerAnimation.timer
+	ld a, [de]
+	add h
+	ld [de], a
+	ret nc ; No need to change frame
 
-	jp CopyBytes
+	ld a , 1
+	ld [wUpdatePlayerSprite], a
+	dec de
+	ASSERT wPlayerAnimation.timer - 1 == wPlayerAnimation.frame
+	ld a, [de]
+	inc a
+	cp l
+	jr nz, :+
+	xor a ; Reset frame
+:
+	ld [de], a
+	ret
+
+Update2x2MetaspriteGraphics::
+	; TODO: Actual entity system
+
+	ld hl, EntityGraphicsPointerTable
+
+	ld a, [wPlayerEntityGraphicsType]
+	and a
+	jr z, .skip
+.loop
+	inc hl
+	inc hl
+	inc hl
+	dec a
+	jr nz, .loop
+.skip
+	ldh a, [hCurBank]
+	push af
+	ld a, [hl+]
+	rst SwapBank
+	ld a, [hl+]
+	ld h, [hl]
+	ld l, a
+
+	ld a, [wPlayerAnimation.type]
+	call .table
+	ld a, [wPlayerAnimation.frame]
+	call .table
+	ld a, [wPlayerDirection]
+	call .table
+
+	ld bc, 16*16*2/8 ; width * height * bits per pixel / bits per byte
+	ld de, _VRAM8000 + NUM_TILES * 8*8*2/8
+	call CopyBytes
+	jp BankReturn ; Put bank back and return from this function
+
+; Double-increment hl a times and deref hl
+.table
+	and a
+	jr z, .tableSkip
+.tableLoop
+	inc hl
+	inc hl
+	dec a
+	jr nz, .tableLoop
+.tableSkip
+.derefHlAndRet
+	ld a, [hl+]
+	ld h, [hl]
+	ld l, a
+	ret
 
 ; Param hl: position address
 ; Param d: first tile id (offset by 0 to 3 for the individual sprites)

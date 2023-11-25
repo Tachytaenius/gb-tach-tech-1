@@ -4,10 +4,10 @@ SECTION "Game Init", ROM0
 
 GameInit::
 	; Initialise vars
-	; To be done properly later, of course
+	; TEMP, TODO properly
 	xor a
 	ld hl, wPlayerPosition
-	ld b, 9
+	ld b, 13
 :
 	ld [hl+], a
 	dec b

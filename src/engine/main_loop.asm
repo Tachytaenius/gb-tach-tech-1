@@ -1,3 +1,5 @@
+INCLUDE "constants/joypad.inc"
+
 SECTION "Main Loop Variables", WRAM0
 
 wPlayerPosition::
@@ -19,6 +21,17 @@ wPlayerVelocity::
 	ds 1; signed 3.4
 
 wPlayerDirection::
+	ds 1
+
+wPlayerAnimation::
+.type::
+	ds 1
+.frame::
+	ds 1
+.timer::
+	ds 1
+
+wPlayerEntityGraphicsType::
 	ds 1
 
 wUpdatePlayerSprite::
@@ -46,9 +59,21 @@ MainLoop::
 	call UpdateJoypad
 	call ResetShadowOAM
 
+	call StepEntityAnimation
 	call ProcessPlayerInput
 	call AcceleratePlayer
 	call ApplyPlayerVelocity
+
+	; TEMP
+	ldh a, [hJoypad.pressed]
+	and JOY_B_MASK
+	jr z, :+
+	ld a, [wPlayerEntityGraphicsType]
+	xor 1
+	ld [wPlayerEntityGraphicsType], a
+	ld a, 1
+	ld [wUpdatePlayerSprite], a
+:
 
 .waitVBlank::
 	halt

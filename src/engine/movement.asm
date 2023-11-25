@@ -57,18 +57,54 @@ ProcessPlayerInput::
 	; Would be cool to have an option to prioritise new directions instead of old ones
 	ld a, b
 	cp DIR_NONE
-	ret z
+	jr z, .notWalking
 	ld a, [wPlayerDirection]
 	call DirectionToPad
 	ld c, a
 	ASSERT JOY_RIGHT_MASK | JOY_DOWN_MASK | JOY_LEFT_MASK | JOY_UP_MASK == %1111 
 	ldh a, [hJoypad.down] ; No need to filter this to the low nybble (joypad)
 	and c
-	ret nz ; Old direction still held, stick with it
+	jr nz, .handleAnimation ; Old direction still held, stick with it
 	ld a, b
 	ld [wPlayerDirection], a
 	ld a, 1
 	ld [wUpdatePlayerSprite], a
+
+.handleAnimation
+	ld a, [wPlayerAnimation.type]
+	cp ANIM_TYPE_ID_WALKING
+	ret z
+
+	; Start walking
+	ASSERT wPlayerAnimation == wPlayerAnimation.type
+	ASSERT wPlayerAnimation.type + 1 == wPlayerAnimation.frame
+	ASSERT wPlayerAnimation.frame +1 == wPlayerAnimation.timer
+	ld hl, wPlayerAnimation
+	ld a, ANIM_TYPE_ID_WALKING
+	ld [hl+], a
+	xor a
+	ld [hl+], a
+	ld [hl], a
+	ld a, 1
+	ld [wUpdatePlayerSprite], a
+	ret
+
+.notWalking
+	ld hl, wPlayerAnimation.type
+	ld a, [hl] ; Type
+	ASSERT ANIM_TYPE_ID_STANDING == 0
+	and a
+	jr z, :+
+	ld a, 1
+	ld [wUpdatePlayerSprite], a
+	xor a ; Not after label because it would be 0 already if you jumped
+:
+	ASSERT wPlayerAnimation == wPlayerAnimation.type
+	ASSERT wPlayerAnimation.type + 1 == wPlayerAnimation.frame
+	ASSERT wPlayerAnimation.frame +1 == wPlayerAnimation.timer
+	ld [hl+], a ; Type
+	ld [hl+], a ; Frame
+	ld [hl], a ; Timer
 	ret
 
 DirectionToPad::

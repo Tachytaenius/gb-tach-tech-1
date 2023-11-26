@@ -9,3 +9,4 @@ SECTION FRAGMENT "Entity Skins Pointer Table", ROM0 ; Each entity skin inc file 
 EntitySkinsPointerTable::
 INCLUDE "assets/gfx/entity_skins/knight/include.inc"
 INCLUDE "assets/gfx/entity_skins/king/include.inc"
+INCLUDE "assets/gfx/entity_skins/ancient_knight/include.inc"

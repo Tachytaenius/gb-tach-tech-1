@@ -72,9 +72,13 @@ MainLoop::
 	; TEMP
 	ldh a, [hJoypad.pressed]
 	and JOY_B_MASK
-	jr z, :+
+	jr z, :++
 	ld a, [wPlayerEntitySkinId]
-	xor 1
+	inc a
+	cp 3
+	jr nz, :+
+	xor a
+:
 	ld [wPlayerEntitySkinId], a
 	ld a, 1
 	ld [wUpdatePlayerSprite], a

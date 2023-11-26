@@ -5,19 +5,25 @@ local mode = select(1, ...)
 local usage = [[
 Valid arguments:
 
-animations animations-data-path-in animations-data-path-out
+animations animations_list_source_path animations_include_destination_path
 
-dependencies animations-data-path-in entity-data-path-in entity-graphics-directory-path-out
+dependencies animations_list_source_path entity_skin_source_directory_path entity_skin_destination_directory_path
 
-build animations-data-path-in entity-data-path-in entity-graphics-directory-path-out
+build animations_list_source_path entity_skin_source_directory_path entity_skin_destination_directory_path
 ]]
 
-local tileSize = math.tointeger(8*8*2/8) -- width * height * bits per pixel / bits per byte
-local metasprite2x2Size = tileSize * 4
+local tileSize = math.tointeger(8 * 8 * 2 / 8) -- width * height * bits per pixel / bits per byte
+local metasprite2x2Size = tileSize * 2 * 2
 
 local function exitError(message)
 	io.stderr:write(message)
 	os.exit(false)
+end
+
+local function exitAssert(condition, message)
+	if not condition then
+		exitError(message)
+	end
 end
 
 local indentString = "\t"
@@ -36,13 +42,13 @@ local function directions()
 	end
 end
 
-local function getAnimations(animationsDataPath)
+local function getAnimations(animationsListSourcePath)
 	-- Name used for by name is snake case name
 
 	local asArray, byName = {}, {}
 	local i = 0
 
-	for line in io.lines(animationsDataPath) do
+	for line in io.lines(animationsListSourcePath) do
 		local words = {}
 		for word in line:gmatch("%S+") do
 			words[#words + 1] = word
@@ -67,12 +73,12 @@ local function getAnimations(animationsDataPath)
 end
 
 if mode == "animations" then
-	local animationsDataPath = select(2, ...)
-	local animationIncPath = select(3, ...)
+	local animationsListSourcePath = select(2, ...)
+	local animationsIncludeDestinationPath = select(3, ...)
 
-	local animationsAsArray = getAnimations(animationsDataPath)
+	local animationsAsArray = getAnimations(animationsListSourcePath)
 
-	local animationIncString =
+	local animationsIncludeDestinationString =
 		"RSRESET\n\n" ..
 		"SECTION \"Animation Type Table\", ROM0\n\n" ..
 		"AnimationTypeTable::\n"
@@ -80,7 +86,7 @@ if mode == "animations" then
 		if i > 256 then
 			exitError("Too many animations! Ids are not 8-bit (limit is 256)")
 		end
-		animationIncString = animationIncString ..
+		animationsIncludeDestinationString = animationsIncludeDestinationString ..
 			indentString .. "DEF ANIM_TYPE_ID_" .. animation.nameScreamingCase .. " RB\n" ..
 			indentString .. "DEF ANIM_FRAMES_" .. animation.nameScreamingCase .. " EQU " .. animation.frames .. "\n" ..
 			indentString .. "DEF ANIM_SPEED_" .. animation.nameScreamingCase .. " EQU " .. animation.speed .."\n" ..
@@ -89,33 +95,33 @@ if mode == "animations" then
 			indentString .. "EXPORT ANIM_SPEED_" .. animation.nameScreamingCase .. "\n" ..
 			indentString .. "db ANIM_FRAMES_" .. animation.nameScreamingCase .. ", ANIM_SPEED_" .. animation.nameScreamingCase .. "\n\n"
 	end
-	animationIncString = animationIncString:sub(1, -2) -- Remove one of the double trailing newlines
+	animationsIncludeDestinationString = animationsIncludeDestinationString:sub(1, -2) -- Remove one of the double trailing newlines
 
-	local animationIncFile = io.open(animationIncPath, "w+")
-	animationIncFile:write(animationIncString)
-	animationIncFile:close()
+	local animationsIncludeDestinationFile = io.open(animationsIncludeDestinationPath, "w+")
+	animationsIncludeDestinationFile:write(animationsIncludeDestinationString)
+	animationsIncludeDestinationFile:close()
 elseif mode == "dependencies" then
-	local animationsDataPath = select(2, ...)
-	local entityGraphicsInputDirectoryPath = select(3, ...)
-	local entityGraphicsOutputDirectoryPath = select(4, ...)
+	local animationsListSourcePath = select(2, ...)
+	local entitySkinSourceDirectoryPath = select(3, ...)
+	local entitySkinDestinationDirectoryPath = select(4, ...)
 
 	-- Ensure trailing slash for direcory paths
-	if not entityGraphicsInputDirectoryPath:find("/$") then
-		entityGraphicsInputDirectoryPath = entityGraphicsInputDirectoryPath .. "/"
+	if not entitySkinSourceDirectoryPath:find("/$") then
+		entitySkinSourceDirectoryPath = entitySkinSourceDirectoryPath .. "/"
 	end
-	if not entityGraphicsOutputDirectoryPath:find("/$") then
-		entityGraphicsOutputDirectoryPath = entityGraphicsOutputDirectoryPath .. "/"
+	if not entitySkinDestinationDirectoryPath:find("/$") then
+		entitySkinDestinationDirectoryPath = entitySkinDestinationDirectoryPath .. "/"
 	end
 
-	local entityGraphicsDataPath = entityGraphicsInputDirectoryPath .. "data.txt"
-	local entityGraphicsDependenciesPath = entityGraphicsOutputDirectoryPath .. "dependencies.mk"
+	local entitySkinMetadataSourcePath = entitySkinSourceDirectoryPath .. "metadata.txt"
+	local entitySkinDependenciesDestinationPath = entitySkinDestinationDirectoryPath .. "dependencies.mk"
 
-	local _, animationsByName = getAnimations(animationsDataPath)
+	local _, animationsByName = getAnimations(animationsListSourcePath)
 
-	local entityGraphicsDependenciesString = ""
+	local entitySkinDependenciesDestinationString = ""
 
 	local lineNumber = 1
-	for line in io.lines(entityGraphicsDataPath) do
+	for line in io.lines(entitySkinMetadataSourcePath) do
 		local words = {}
 		for word in line:gmatch("%S+") do
 			words[#words + 1] = word
@@ -123,35 +129,36 @@ elseif mode == "dependencies" then
 
 		if lineNumber > 1 then
 			local animationName = words[1]
-			assert(animationsByName[animationName], "Animation " .. animationName .. " does not exist. Is it in the right case (snake_case)?")
-			entityGraphicsDependenciesString = entityGraphicsDependenciesString ..
-				entityGraphicsOutputDirectoryPath .. "include.inc " .. entityGraphicsOutputDirectoryPath .. "graphics.2bpp: " .. entityGraphicsOutputDirectoryPath .. animationName .. ".2bpp\n"
+			exitAssert(animationsByName[animationName], "Animation " .. animationName .. " does not exist. Is it in the right case (snake_case)?")
+			entitySkinDependenciesDestinationString = entitySkinDependenciesDestinationString ..
+				entitySkinDestinationDirectoryPath .. "include.inc " .. entitySkinDestinationDirectoryPath .. "graphics.2bpp: " ..
+				entitySkinDestinationDirectoryPath .. animationName .. ".2bpp\n"
 		end
 
 		lineNumber = lineNumber + 1
 	end
 	
-	local entityGraphicsDependenciesFile = io.open(entityGraphicsDependenciesPath, "w+")
-	entityGraphicsDependenciesFile:write(entityGraphicsDependenciesString)
-	entityGraphicsDependenciesFile:close()
+	local entitySkinDependenciesDestinationFile = io.open(entitySkinDependenciesDestinationPath, "w+")
+	entitySkinDependenciesDestinationFile:write(entitySkinDependenciesDestinationString)
+	entitySkinDependenciesDestinationFile:close()
 elseif mode == "build" then
-	local animationsDataPath = select(2, ...)
-	local entityGraphicsInputDirectoryPath = select(3, ...)
-	local entityGraphicsOutputDirectoryPath = select(4, ...)
+	local animationsListSourcePath = select(2, ...)
+	local entitySkinSourceDirectoryPath = select(3, ...)
+	local entitySkinDestinationDirectoryPath = select(4, ...)
 
 	-- Ensure trailing slash for direcory paths
-	if not entityGraphicsInputDirectoryPath:find("/$") then
-		entityGraphicsInputDirectoryPath = entityGraphicsInputDirectoryPath .. "/"
+	if not entitySkinSourceDirectoryPath:find("/$") then
+		entitySkinSourceDirectoryPath = entitySkinSourceDirectoryPath .. "/"
 	end
-	if not entityGraphicsOutputDirectoryPath:find("/$") then
-		entityGraphicsOutputDirectoryPath = entityGraphicsOutputDirectoryPath .. "/"
+	if not entitySkinDestinationDirectoryPath:find("/$") then
+		entitySkinDestinationDirectoryPath = entitySkinDestinationDirectoryPath .. "/"
 	end
 
-	local entityGraphicsDataPath = entityGraphicsInputDirectoryPath .. "data.txt"
-	local entityGraphicsIncludePath = entityGraphicsOutputDirectoryPath .. "include.inc"
-	local entityGraphicsIncludeString = ""
+	local entitySkinMetadataSourcePath = entitySkinSourceDirectoryPath .. "metadata.txt"
+	local entitySkinIncludeDestinationPath = entitySkinDestinationDirectoryPath .. "include.inc"
+	local entitySkinIncludeDestinationString = ""
 
-	local animationsAsArray, animationsByName = getAnimations(animationsDataPath)
+	local animationsAsArray, animationsByName = getAnimations(animationsListSourcePath)
 
 	local byAnimationTableLabel, graphicsDataLabel
 	local pascalCaseEntityName, screamingCaseEntityGfxName
@@ -159,7 +166,7 @@ elseif mode == "build" then
 	local presentAnimationNames = {}
 	local highestAnimationIndex = nil
 	local lineNumber = 1
-	for line in io.lines(entityGraphicsDataPath) do
+	for line in io.lines(entitySkinMetadataSourcePath) do
 		local words = {}
 		for word in line:gmatch("%S+") do
 			words[#words + 1] = word
@@ -169,21 +176,21 @@ elseif mode == "build" then
 			pascalCaseEntityName = words[1]
 			screamingCaseEntityGfxName = words[2]
 
-			byAnimationTableLabel = "x" .. pascalCaseEntityName .. "EntityGraphicsPointersByAnimation"
-			graphicsDataLabel = "x" .. pascalCaseEntityName .. "EntityGraphicsData"
+			byAnimationTableLabel = "x" .. pascalCaseEntityName .. "EntitySkinPointersByAnimation"
+			graphicsDataLabel = "x" .. pascalCaseEntityName .. "EntitySkinGraphicsData"
 
-			entityGraphicsIncludeString = entityGraphicsIncludeString ..
-				"DEF ENTITY_GFX_TYPE_" .. screamingCaseEntityGfxName .. " RB\n" ..
-				"EXPORT ENTITY_GFX_TYPE_" .. screamingCaseEntityGfxName .. "\n\n" ..
-				"SECTION FRAGMENT \"Entity Graphics Pointer Table\", ROM0\n\n" ..
+			entitySkinIncludeDestinationString = entitySkinIncludeDestinationString ..
+				"DEF ENTITY_SKIN_" .. screamingCaseEntityGfxName .. " RB\n" ..
+				"EXPORT ENTITY_SKIN_" .. screamingCaseEntityGfxName .. "\n\n" ..
+				"SECTION FRAGMENT \"Entity Skins Pointer Table\", ROM0\n\n" ..
 				indentString .. "db BANK(" .. byAnimationTableLabel .. ")\n" ..
 				indentString .. "dw " .. byAnimationTableLabel .. "\n\n" ..
-				"SECTION \"" .. pascalCaseEntityName .. " Entity Graphics\", ROMX\n\n" ..
+				"SECTION \"" .. pascalCaseEntityName .. " Entity Skin\", ROMX\n\n" ..
 				byAnimationTableLabel .. ":\n"
 		else
 			-- Animations
 			local animationName = words[1]
-			assert(animationsByName[animationName], "Animation " .. animationName .. " does not exist. Is it in the right case (snake_case)?")
+			exitAssert(animationsByName[animationName], "Animation " .. animationName .. " does not exist. Is it in the right case (snake_case)?")
 			local animationIndex = animationsByName[animationName].index
 			if highestAnimationIndex then
 				highestAnimationIndex = math.max(highestAnimationIndex, animationIndex)
@@ -195,7 +202,7 @@ elseif mode == "build" then
 		lineNumber = lineNumber + 1
 	end
 
-	local graphicsData = ""
+	local entitySkinGraphicsDataString = ""
 
 	local addresses, sprites = {}, {}
 
@@ -204,7 +211,7 @@ elseif mode == "build" then
 			break
 		end
 		if presentAnimationNames[animation.nameSnakeCase] then
-			local animationSpritesheetPath = entityGraphicsOutputDirectoryPath .. animation.nameSnakeCase .. ".2bpp"
+			local animationSpritesheetPath = entitySkinDestinationDirectoryPath .. animation.nameSnakeCase .. ".2bpp"
 			local animationSpritesheetFile = io.open(animationSpritesheetPath, "rb")
 			local animationSpritesheetData = animationSpritesheetFile:read("a")
 			animationSpritesheetFile:close()
@@ -216,7 +223,7 @@ elseif mode == "build" then
 			}
 			addresses[animation.nameSnakeCase] = addressesThisAnimation
 			addresses[index] = addressesThisAnimation
-			local curAddress = #graphicsData
+			local curAddress = #entitySkinGraphicsDataString
 			for frame = 0, animation.frames - 1 do
 				local addressThisFrame = {}
 				for directionName, directionIndex in directions() do
@@ -225,7 +232,7 @@ elseif mode == "build" then
 					local topTilesEndOffset = topTilesStartOffset + tileSize * 2
 					local bottomTilesStartOffset = topTilesStartOffset + rowSize
 					local bottomTilesEndOffset = topTilesEndOffset + rowSize
-					graphicsData = graphicsData ..
+					entitySkinGraphicsDataString = entitySkinGraphicsDataString ..
 						animationSpritesheetData:sub(topTilesStartOffset + 1, topTilesEndOffset) ..
 						animationSpritesheetData:sub(bottomTilesStartOffset + 1, bottomTilesEndOffset)
 
@@ -237,56 +244,56 @@ elseif mode == "build" then
 		end
 	end
 
-	local graphicsDataPath = entityGraphicsOutputDirectoryPath .. "graphics.2bpp"
-	local graphicsDataFile = io.open(graphicsDataPath, "w+b")
-	graphicsDataFile:write(graphicsData)
-	graphicsDataFile:close()
+	local entitySkinGraphicsDataPath = entitySkinDestinationDirectoryPath .. "graphics.2bpp"
+	local entitySkinGraphicsDataFile = io.open(entitySkinGraphicsDataPath, "w+b")
+	entitySkinGraphicsDataFile:write(entitySkinGraphicsDataString)
+	entitySkinGraphicsDataFile:close()
 
 	for _, animation in ipairs(animationsAsArray) do
 		if animation.index > highestAnimationIndex then
 			break
 		end
 		if presentAnimationNames[animation.nameSnakeCase] then
-			entityGraphicsIncludeString = entityGraphicsIncludeString ..
+			entitySkinIncludeDestinationString = entitySkinIncludeDestinationString ..
 				indentString .. "dw x" .. pascalCaseEntityName .. "GraphicsPointers" .. animation.namePascalCase .. "\n"
 		else
-			entityGraphicsIncludeString = entityGraphicsIncludeString ..
+			entitySkinIncludeDestinationString = entitySkinIncludeDestinationString ..
 				indentString .. "dw 0\n" -- Null pointer
 		end
 	end
 
-	entityGraphicsIncludeString = entityGraphicsIncludeString .. "\n"
+	entitySkinIncludeDestinationString = entitySkinIncludeDestinationString .. "\n"
 
 	for _, animation in ipairs(animationsAsArray) do
 		if animation.index > highestAnimationIndex then
 			break
 		end
 		if presentAnimationNames[animation.nameSnakeCase] then
-			entityGraphicsIncludeString = entityGraphicsIncludeString ..
+			entitySkinIncludeDestinationString = entitySkinIncludeDestinationString ..
 				"x" .. pascalCaseEntityName .. "GraphicsPointers" .. animation.namePascalCase .. ":\n"
 			for frame = 0, animation.frames - 1 do
-				entityGraphicsIncludeString = entityGraphicsIncludeString ..
+				entitySkinIncludeDestinationString = entitySkinIncludeDestinationString ..
 					indentString .. "dw .frame" .. frame .. "\n"
 			end
 			for frame = 0, animation.frames - 1 do
-				entityGraphicsIncludeString = entityGraphicsIncludeString ..
+				entitySkinIncludeDestinationString = entitySkinIncludeDestinationString ..
 					".frame" .. frame .. ":\n"
 				for directionName in directions() do
 					local offset = addresses[animation.nameSnakeCase].frames[frame][directionName]
-					entityGraphicsIncludeString = entityGraphicsIncludeString ..
+					entitySkinIncludeDestinationString = entitySkinIncludeDestinationString ..
 						indentString .. "dw " .. graphicsDataLabel .. " + " .. offset .. " ; " .. directionName .. "\n"
 				end
 			end
-			entityGraphicsIncludeString = entityGraphicsIncludeString .. "\n"
+			entitySkinIncludeDestinationString = entitySkinIncludeDestinationString .. "\n"
 		end
 	end
 
-	entityGraphicsIncludeString = entityGraphicsIncludeString ..
+	entitySkinIncludeDestinationString = entitySkinIncludeDestinationString ..
 		graphicsDataLabel .. ":\n" ..
-		indentString .. "INCBIN \"" .. entityGraphicsOutputDirectoryPath .. "graphics.2bpp\"\n"
+		indentString .. "INCBIN \"" .. entitySkinDestinationDirectoryPath .. "graphics.2bpp\"\n"
 
-	local entityGraphicsIncludeFile = io.open(entityGraphicsIncludePath, "w+")
-	entityGraphicsIncludeFile:write(entityGraphicsIncludeString)
+	local entityGraphicsIncludeFile = io.open(entitySkinIncludeDestinationPath, "w+")
+	entityGraphicsIncludeFile:write(entitySkinIncludeDestinationString)
 	entityGraphicsIncludeFile:close()
 else
 	exitError(usage)

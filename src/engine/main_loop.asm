@@ -31,7 +31,7 @@ wPlayerAnimation::
 .timer::
 	ds 1
 
-wPlayerEntityGraphicsType::
+wPlayerEntitySkinId::
 	ds 1
 
 wUpdatePlayerSprite::
@@ -68,9 +68,9 @@ MainLoop::
 	ldh a, [hJoypad.pressed]
 	and JOY_B_MASK
 	jr z, :+
-	ld a, [wPlayerEntityGraphicsType]
+	ld a, [wPlayerEntitySkinId]
 	xor 1
-	ld [wPlayerEntityGraphicsType], a
+	ld [wPlayerEntitySkinId], a
 	ld a, 1
 	ld [wUpdatePlayerSprite], a
 :

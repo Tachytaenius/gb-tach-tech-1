@@ -45,9 +45,9 @@ StepEntityAnimation::
 Update2x2MetaspriteGraphics::
 	; TODO: Actual entity system
 
-	ld hl, EntityGraphicsPointerTable
+	ld hl, EntitySkinsPointerTable
 
-	ld a, [wPlayerEntityGraphicsType]
+	ld a, [wPlayerEntitySkinId]
 	and a
 	jr z, .skip
 .loop

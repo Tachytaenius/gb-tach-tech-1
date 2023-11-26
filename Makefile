@@ -78,21 +78,21 @@ obj/%.mk: src/%.asm
 obj/%.o: obj/%.mk
 	@touch $@
 
-# Convert the animations from the file read by entity-gfx to one read by rgbasm
+# Convert the animations from the file read by entity-skins to one read by rgbasm
 assets/gfx/animations.inc: src/assets/gfx/animations.txt
 	@${MKDIR_P} ${@D}
-	${LUA} tools/entity-gfx.lua animations src/assets/gfx/animations.txt $@
+	${LUA} tools/entity-skins.lua animations src/assets/gfx/animations.txt $@
 
 # Ensure that updating the pngs causes a rebuild of the graphics for that entity
-assets/gfx/entities/%/dependencies.mk: src/assets/gfx/entities/%/data.txt
+assets/gfx/entity_skins/%/dependencies.mk: src/assets/gfx/entity_skins/%/metadata.txt
 	@${MKDIR_P} ${@D}
-	${LUA} tools/entity-gfx.lua dependencies src/assets/gfx/animations.txt src/assets/gfx/entities/$* assets/gfx/entities/$*
+	${LUA} tools/entity-skins.lua dependencies src/assets/gfx/animations.txt src/assets/gfx/entity_skins/$* assets/gfx/entity_skins/$*
 
-# Entity graphics conversions
-# Uses additional auto-generated dependencies in a mk file generated based on file contents
-assets/gfx/entities/%/include.inc assets/gfx/entities/%/graphics.2bpp: src/assets/gfx/entities/%/data.txt
+# Entity skin conversions
+# Uses additional auto-generated dependencies (for the spritesheets) in mk files generated based on file contents
+assets/gfx/entity_skins/%/include.inc assets/gfx/entity_skins/%/graphics.2bpp: src/assets/gfx/entity_skins/%/metadata.txt
 	@${MKDIR_P} ${@D}
-	${LUA} tools/entity-gfx.lua build src/assets/gfx/animations.txt src/assets/gfx/entities/$* assets/gfx/entities/$*
+	${LUA} tools/entity-skins.lua build src/assets/gfx/animations.txt src/assets/gfx/entity_skins/$* assets/gfx/entity_skins/$*
 
 # Define how to compress files using the PackBits16 codec.
 # (The compressor script requires Python 3.)
@@ -110,5 +110,5 @@ assets/%.2bpp: src/assets/%.png
 
 ifeq ($(filter clean,${MAKECMDGOALS}),)
 include $(patsubst src/%.asm,obj/%.mk,${SRCS})
-include $(patsubst src/assets/gfx/entities/%/data.txt,assets/gfx/entities/%/dependencies.mk,$(wildcard src/assets/gfx/entities/*/data.txt))
+include $(patsubst src/assets/gfx/entity_skins/%/metadata.txt,assets/gfx/entity_skins/%/dependencies.mk,$(wildcard src/assets/gfx/entity_skins/*/metadata.txt))
 endif

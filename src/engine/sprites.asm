@@ -69,7 +69,7 @@ Update2x2MetaspriteGraphics::
 	; Not flipped
 	ld bc, 16*16*2/8 ; width * height * bits per pixel / bits per byte
 	ld de, _VRAM8000 + NUM_TILES * 8*8*2/8
-	call CopyBytes
+	call CopyBytesWaitVRAM
 	; Set the flags that each sprite uses to be unflipped
 	xor a
 	ld [wPlayerMetaspriteFlags], a
@@ -87,9 +87,9 @@ Update2x2MetaspriteGraphics::
 	inc h
 :
 	; Copy 2 tiles
-	call CopyBytes
+	call CopyBytesWaitVRAM
 	pop hl ; Get pointer to first two tiles
-	call CopyBytes
+	call CopyBytesWaitVRAM
 
 	ld a, OAMF_XFLIP
 	ld [wPlayerMetaspriteFlags], a

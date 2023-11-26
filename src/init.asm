@@ -45,9 +45,9 @@ Init::
 	ldh [rBGP], a
 	ldh [rOBP0], a
 
-	; Clear VBlank flag
+	; Clear expecting VBlank flag
 	xor a
-	ldh [hVBlankFlag], a
+	ldh [hExpectingVBlank], a
 	; Clear joypad
 	ld hl, hJoypad
 	ld [hl+], a
@@ -68,4 +68,4 @@ Init::
 	ldh [rIE], a
 
 	; Wait for VBlank so that the first main loop run can have as much VBlank as the usual
-	jp MainLoop.waitVBlank
+	jp MainLoop

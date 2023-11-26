@@ -43,6 +43,8 @@ wUpdatePlayerSprite::
 SECTION "Main Loop", ROM0
 
 MainLoop::
+	call WaitVBlank
+
 	; Graphics
 
 	ld a, [wUpdatePlayerSprite]
@@ -77,14 +79,5 @@ MainLoop::
 	ld a, 1
 	ld [wUpdatePlayerSprite], a
 :
-
-.waitVBlank::
-	halt
-	nop
-	ldh a, [hVBlankFlag]
-	and a
-	jr z, .waitVBlank
-	xor a
-	ldh [hVBlankFlag], a
 
 	jp MainLoop

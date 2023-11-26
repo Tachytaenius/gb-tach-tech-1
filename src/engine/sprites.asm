@@ -11,7 +11,7 @@ StepEntityAnimation::
 	ld hl, AnimationTypeTable
 	and a
 	jr z, .skip
-.loop ; Could probably do funky address stuff here if the Animation Type Table section is aligned
+.loop ; TODO: Funky address stuff here if the Animation Type Table section is aligned
 	inc hl
 	inc hl
 	dec a

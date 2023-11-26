@@ -76,7 +76,6 @@ Update2x2MetaspriteGraphics::
 	jp BankReturn ; Put bank back and return from this function
 
 .flipped
-	; TODO: address alignment funkiness optimisation. Use ALIGN mid-section in the generated entity skin include files
 	ld bc, 8*16*2/8
 	ld de, _VRAM8000 + NUM_TILES * 8*8*2/8
 	push hl ; Backup pointer to first two tiles

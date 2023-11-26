@@ -1,6 +1,6 @@
 local mode = select(1, ...)
 
--- TODO: exitError on more cases!
+-- TODO: error on invalid metadata or animation list
 
 local usage = [[
 Valid arguments:
@@ -16,6 +16,9 @@ local tileSize = math.tointeger(8 * 8 * 2 / 8) -- width * height * bits per pixe
 local metasprite2x2Size = tileSize * 2 * 2
 
 local function exitError(message)
+	if not message:find("\n$") then -- Enforce terminating line break
+		message = message .. "\n"
+	end
 	io.stderr:write(message)
 	os.exit(false)
 end
@@ -48,7 +51,9 @@ local function getAnimations(animationsListSourcePath)
 	local asArray, byName = {}, {}
 	local i = 0
 
-	for line in io.lines(animationsListSourcePath) do
+	local animationsListSourceFile = io.open(animationsListSourcePath, "r")
+	exitAssert(animationsListSourceFile, "Could not open file " .. animationsListSourcePath .. " for reading")
+	for line in animationsListSourceFile:lines() do
 		local words = {}
 		for word in line:gmatch("%S+") do
 			words[#words + 1] = word
@@ -98,6 +103,7 @@ if mode == "animations" then
 	animationsIncludeDestinationString = animationsIncludeDestinationString:sub(1, -2) -- Remove one of the double trailing newlines
 
 	local animationsIncludeDestinationFile = io.open(animationsIncludeDestinationPath, "w+")
+	exitAssert(animationsIncludeDestinationFile, "Could not open file " .. animationsIncludeDestinationPath .. " for writing")
 	animationsIncludeDestinationFile:write(animationsIncludeDestinationString)
 	animationsIncludeDestinationFile:close()
 elseif mode == "dependencies" then
@@ -121,7 +127,9 @@ elseif mode == "dependencies" then
 	local entitySkinDependenciesDestinationString = ""
 
 	local lineNumber = 1
-	for line in io.lines(entitySkinMetadataSourcePath) do
+	local entitySkinMetadataSourceFile = io.open(entitySkinMetadataSourcePath, "r")
+	exitAssert(entitySkinMetadataSourceFile, "Could not open file " .. entitySkinMetadataSourcePath .. " for reading")
+	for line in entitySkinMetadataSourceFile:lines() do
 		local words = {}
 		for word in line:gmatch("%S+") do
 			words[#words + 1] = word
@@ -139,6 +147,7 @@ elseif mode == "dependencies" then
 	end
 	
 	local entitySkinDependenciesDestinationFile = io.open(entitySkinDependenciesDestinationPath, "w+")
+	exitAssert(entitySkinDependenciesDestinationFile, "Could not open file " .. entitySkinDependenciesDestinationPath .. " for writing")
 	entitySkinDependenciesDestinationFile:write(entitySkinDependenciesDestinationString)
 	entitySkinDependenciesDestinationFile:close()
 elseif mode == "build" then
@@ -166,7 +175,9 @@ elseif mode == "build" then
 	local presentAnimationNames = {}
 	local highestAnimationIndex = nil
 	local lineNumber = 1
-	for line in io.lines(entitySkinMetadataSourcePath) do
+	local entitySkinMetadataSourceFile = io.open(entitySkinMetadataSourcePath, "r")
+	exitAssert(entitySkinMetadataSourceFile, "Could not open file " .. entitySkinMetadataSourcePath .. " for reading")
+	for line in entitySkinMetadataSourceFile:lines() do
 		local words = {}
 		for word in line:gmatch("%S+") do
 			words[#words + 1] = word
@@ -213,6 +224,7 @@ elseif mode == "build" then
 		if presentAnimationNames[animation.nameSnakeCase] then
 			local animationSpritesheetPath = entitySkinDestinationDirectoryPath .. animation.nameSnakeCase .. ".2bpp"
 			local animationSpritesheetFile = io.open(animationSpritesheetPath, "rb")
+			exitAssert(animationSpritesheetFile, "Could not open file " .. animationSpritesheetPath .. " for reading")
 			local animationSpritesheetData = animationSpritesheetFile:read("a")
 			animationSpritesheetFile:close()
 			local index = #addresses + 1
@@ -246,6 +258,7 @@ elseif mode == "build" then
 
 	local entitySkinGraphicsDataPath = entitySkinDestinationDirectoryPath .. "graphics.2bpp"
 	local entitySkinGraphicsDataFile = io.open(entitySkinGraphicsDataPath, "w+b")
+	exitAssert(entitySkinGraphicsDataFile, "Could not open file " .. entitySkinGraphicsDataPath .. " for writing")
 	entitySkinGraphicsDataFile:write(entitySkinGraphicsDataString)
 	entitySkinGraphicsDataFile:close()
 
@@ -292,9 +305,10 @@ elseif mode == "build" then
 		graphicsDataLabel .. ":\n" ..
 		indentString .. "INCBIN \"" .. entitySkinDestinationDirectoryPath .. "graphics.2bpp\"\n"
 
-	local entityGraphicsIncludeFile = io.open(entitySkinIncludeDestinationPath, "w+")
-	entityGraphicsIncludeFile:write(entitySkinIncludeDestinationString)
-	entityGraphicsIncludeFile:close()
+	local entitySkinIncludeDestinationFile = io.open(entitySkinIncludeDestinationPath, "w+")
+	exitAssert(entitySkinIncludeDestinationFile, "Could not open file " .. entitySkinIncludeDestinationPath .. " for writing")
+	entitySkinIncludeDestinationFile:write(entitySkinIncludeDestinationString)
+	entitySkinIncludeDestinationFile:close()
 else
 	exitError(usage)
 end

@@ -215,7 +215,7 @@ elseif mode == "build" then
 
 	local entitySkinGraphicsDataString = ""
 
-	local addresses, sprites = {}, {}
+	local addresses, metaspriteAddresses = {}, {}
 
 	for _, animation in ipairs(animationsAsArray) do
 		if animation.index > highestAnimationIndex then
@@ -237,21 +237,26 @@ elseif mode == "build" then
 			addresses[index] = addressesThisAnimation
 			local curAddress = #entitySkinGraphicsDataString
 			for frame = 0, animation.frames - 1 do
-				local addressThisFrame = {}
+				local addressesThisFrame = {}
 				for directionName, directionIndex in directions() do
 					local rowSize = #directionNames * tileSize * 2
 					local topTilesStartOffset = tileSize * 2 * directionIndex + frame * rowSize * 2
 					local topTilesEndOffset = topTilesStartOffset + tileSize * 2
 					local bottomTilesStartOffset = topTilesStartOffset + rowSize
 					local bottomTilesEndOffset = topTilesEndOffset + rowSize
-					entitySkinGraphicsDataString = entitySkinGraphicsDataString ..
+					local metasprite =
 						animationSpritesheetData:sub(topTilesStartOffset + 1, topTilesEndOffset) ..
 						animationSpritesheetData:sub(bottomTilesStartOffset + 1, bottomTilesEndOffset)
-
-					addressThisFrame[directionName] = curAddress
-					curAddress = curAddress + metasprite2x2Size
+					if metaspriteAddresses[metasprite] then
+						addressesThisFrame[directionName] = metaspriteAddresses[metasprite]
+					else
+						entitySkinGraphicsDataString = entitySkinGraphicsDataString .. metasprite
+						addressesThisFrame[directionName] = curAddress
+						metaspriteAddresses[metasprite] = curAddress
+						curAddress = curAddress + metasprite2x2Size
+					end
 				end
-				addressesThisAnimation.frames[frame] = addressThisFrame
+				addressesThisAnimation.frames[frame] = addressesThisFrame
 			end
 		end
 	end

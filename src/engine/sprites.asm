@@ -1,5 +1,6 @@
 INCLUDE "hardware.inc"
 INCLUDE "constants/directions.inc"
+INCLUDE "constants/entity_skin_metasprite_flags.inc"
 
 SECTION "Sprite Management", ROM0
 
@@ -43,51 +44,86 @@ StepEntityAnimation::
 	ret
 
 Update2x2MetaspriteGraphics::
-	; TODO: Actual entity system
+	ldh a, [hCurBank]
+	push af
 
 	ld hl, EntitySkinsPointerTable
 
-	ld a, [wPlayerEntitySkinId]
-	and a
-	jr z, .skip
-.loop
-	inc hl
-	inc hl
-	inc hl
-	dec a
-	jr nz, .loop
-.skip
-	ldh a, [hCurBank]
-	push af
-	ld a, [hl+]
+	ld a, [wPlayerEntitySkinId] ; TODO: Actual entity system
+	call .table3Bytes
+	ld a, b
 	rst SwapBank
-	ld a, [hl+]
-	ld h, [hl]
-	ld l, a
 
 	ld a, [wPlayerAnimation.type]
-	call .table
+	call .table2Bytes
 	ld a, [wPlayerAnimation.frame]
-	call .table
+	call .table2Bytes
 	ld a, [wPlayerDirection]
-	call .table
+	call .table3Bytes
+	; b: info byte for metasprite, hl: metasprite data position
 
+	ld a, b
+	and ENTITY_SKIN_METASPRITE_FLAGS_FLIPPED_MASK
+	jr nz, .flipped
+
+	; Not flipped
 	ld bc, 16*16*2/8 ; width * height * bits per pixel / bits per byte
 	ld de, _VRAM8000 + NUM_TILES * 8*8*2/8
 	call CopyBytes
+	; Set the flags that each sprite uses to be unflipped
+	xor a
+	ld [wPlayerMetaspriteFlags], a
 	jp BankReturn ; Put bank back and return from this function
 
+.flipped
+	; TODO: address alignment funkiness optimisation. Use ALIGN mid-section in the generated entity skin include files
+	ld bc, 8*16*2/8
+	ld de, _VRAM8000 + NUM_TILES * 8*8*2/8
+	push hl ; Backup pointer to first two tiles
+	; Add 2 tiles' worth of bytes to hl
+	ld a, 8*16*2/8
+	add l
+	ld l, a
+	jr nc, :+
+	inc h
+:
+	; Copy 2 tiles
+	call CopyBytes
+	pop hl ; Get pointer to first two tiles
+	call CopyBytes
+
+	ld a, OAMF_XFLIP
+	ld [wPlayerMetaspriteFlags], a
+	jp BankReturn
+
 ; Double-increment hl a times and deref hl
-.table
+.table2Bytes
 	and a
-	jr z, .tableSkip
-.tableLoop
+	jr z, .table2BytesSkip
+.table2BytesLoop
 	inc hl
 	inc hl
 	dec a
-	jr nz, .tableLoop
-.tableSkip
-.derefHlAndRet
+	jr nz, .table2BytesLoop
+.table2BytesSkip
+	ld a, [hl+]
+	ld h, [hl]
+	ld l, a
+	ret
+
+; Triple-increment hl a times, load hl+ into b, and deref hl
+.table3Bytes
+	and a
+	jr z, .table3BytesSkip
+.table3BytesLoop
+	inc hl
+	inc hl
+	inc hl
+	dec a
+	jr nz, .table3BytesLoop
+.table3BytesSkip
+	ld a, [hl+]
+	ld b, a
 	ld a, [hl+]
 	ld h, [hl]
 	ld l, a
@@ -117,7 +153,6 @@ Render2x2Metasprite::
 	; Load x as 8.0 into a
 	ld a, [hl+]
 	ld b, [hl]
-	inc hl
 	ld c, a
 	; bc: x 12.4
 	xor b
@@ -127,7 +162,20 @@ Render2x2Metasprite::
 	; a: x 8.0
 	ld b, a ; Back up base x
 
-	; e: y 8.0, b: x 8.0, d: still first tile id
+	; hl: Position + 3
+	; We want to go from position to MetaspriteFlags
+	ASSERT wPlayerMetaspriteFlags - (wPlayerPosition + 3) > 0
+	ld a, wPlayerMetaspriteFlags - (wPlayerPosition + 3)
+	add l
+	ld l, a
+	jr nc, :+
+	inc h
+:
+	; hl: MetaspriteFlags
+	ld c, [hl]
+
+	; e: y 8.0, b: x 8.0, d: still first tile id, c: metasprite flags
+
 	; Now write to shadow OAM
 	ld h, HIGH(wShadowOAM)
 	ldh a, [hOAMIndex]
@@ -142,19 +190,7 @@ Render2x2Metasprite::
 	ld a, d
 	inc d
 	ld [hl+], a ; Tile
-	xor a
-	ld [hl+], a ; Flags
-	; Top right
-	ld a, e
-	add OAM_Y_OFS
-	ld [hl+], a ; y
-	ld a, b
-	add OAM_X_OFS + 8
-	ld [hl+], a ; x
-	ld a, d
-	inc d
-	ld [hl+], a ; Tile
-	xor a
+	ld a, c
 	ld [hl+], a ; Flags
 	; Bottom left
 	ld a, e
@@ -166,7 +202,19 @@ Render2x2Metasprite::
 	ld a, d
 	inc d
 	ld [hl+], a ; Tile
-	xor a
+	ld a, c
+	ld [hl+], a ; Flags
+	; Top right
+	ld a, e
+	add OAM_Y_OFS
+	ld [hl+], a ; y
+	ld a, b
+	add OAM_X_OFS + 8
+	ld [hl+], a ; x
+	ld a, d
+	inc d
+	ld [hl+], a ; Tile
+	ld a, c
 	ld [hl+], a ; Flags
 	; Bottom right
 	ld a, e
@@ -178,7 +226,7 @@ Render2x2Metasprite::
 	ld a, d
 	; inc d
 	ld [hl+], a ; Tile
-	xor a
+	ld a, c
 	ld [hl+], a ; Flags
 
 	ret

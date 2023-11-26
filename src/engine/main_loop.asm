@@ -34,6 +34,9 @@ wPlayerAnimation::
 wPlayerEntitySkinId::
 	ds 1
 
+wPlayerMetaspriteFlags::
+	ds 1 ; Same for all sprites
+
 wUpdatePlayerSprite::
 	ds 1 ; boolean
 

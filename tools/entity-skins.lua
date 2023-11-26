@@ -45,6 +45,51 @@ local function directions()
 	end
 end
 
+local function reverseByte(byteValue)
+	local ret = byteValue
+	ret = (ret & 0xF0) >> 4 | (ret & 0x0F) << 4
+	ret = (ret & 0xCC) >> 2 | (ret & 0x33) << 2
+	ret = (ret & 0xAA) >> 1 | (ret & 0x55) << 1
+	return ret
+end
+
+local function flip2x2Metasprite(data)
+	local ret = ""
+	local getTileAhead = false -- Gets flipped immediately
+	for i = 1, #data do
+		if (i - 1) % tileSize == 0 then
+			getTileAhead = not getTileAhead
+		end
+		local indexToUse = getTileAhead and i + tileSize or i - tileSize
+		local inByte = string.byte(data:sub(indexToUse, indexToUse))
+		local append = reverseByte(inByte)
+		ret = ret .. string.char(append)
+	end
+	return ret
+end
+
+local function constructInfoByteString(flagsTable)
+	local foundTrue = false
+	for _, v in pairs(flagsTable) do
+		if v then
+			foundTrue = true
+			break
+		end
+	end
+	if not foundTrue then
+		return "0"
+	end
+	-- At least one flag will appear
+
+	local ret = ""
+	if flagsTable.flipped then
+		ret = ret .. "ENTITY_SKIN_METASPRITE_FLAGS_FLIPPED_MASK |"
+	end
+
+	ret = ret:sub(1, -3) -- Remove terminating " |"
+	return ret
+end
+
 local function getAnimations(animationsListSourcePath)
 	-- Name used for by name is snake case name
 
@@ -215,7 +260,7 @@ elseif mode == "build" then
 
 	local entitySkinGraphicsDataString = ""
 
-	local addresses, metaspriteAddresses = {}, {}
+	local addressesAndInfo, metaspriteAddresses = {}, {}
 
 	for _, animation in ipairs(animationsAsArray) do
 		if animation.index > highestAnimationIndex then
@@ -227,36 +272,47 @@ elseif mode == "build" then
 			exitAssert(animationSpritesheetFile, "Could not open file " .. animationSpritesheetPath .. " for reading")
 			local animationSpritesheetData = animationSpritesheetFile:read("a")
 			animationSpritesheetFile:close()
-			local index = #addresses + 1
-			local addressesThisAnimation = {
+			local index = #addressesAndInfo + 1
+			local addressesAndInfoThisAnimation = {
 				animationName = animation.nameSnakeCase,
 				index = index,
 				frames = {}
 			}
-			addresses[animation.nameSnakeCase] = addressesThisAnimation
-			addresses[index] = addressesThisAnimation
+			addressesAndInfo[animation.nameSnakeCase] = addressesAndInfoThisAnimation
+			addressesAndInfo[index] = addressesAndInfoThisAnimation
 			local curAddress = #entitySkinGraphicsDataString
 			for frame = 0, animation.frames - 1 do
-				local addressesThisFrame = {}
+				local addressesAndInfoThisFrame = {}
 				for directionName, directionIndex in directions() do
 					local rowSize = #directionNames * tileSize * 2
-					local topTilesStartOffset = tileSize * 2 * directionIndex + frame * rowSize * 2
-					local topTilesEndOffset = topTilesStartOffset + tileSize * 2
-					local bottomTilesStartOffset = topTilesStartOffset + rowSize
-					local bottomTilesEndOffset = topTilesEndOffset + rowSize
+					local topLeftTileOffset = tileSize * 2 * directionIndex + frame * rowSize * 2
+					local bottomLeftTileOffset = topLeftTileOffset + rowSize
+					local topRightTileOffset = topLeftTileOffset + tileSize
+					local bottomRightTileOffset = topRightTileOffset + rowSize
 					local metasprite =
-						animationSpritesheetData:sub(topTilesStartOffset + 1, topTilesEndOffset) ..
-						animationSpritesheetData:sub(bottomTilesStartOffset + 1, bottomTilesEndOffset)
+						animationSpritesheetData:sub(topLeftTileOffset + 1, topLeftTileOffset + tileSize) ..
+						animationSpritesheetData:sub(bottomLeftTileOffset + 1, bottomLeftTileOffset + tileSize) ..
+						animationSpritesheetData:sub(topRightTileOffset + 1, topRightTileOffset + tileSize) ..
+						animationSpritesheetData:sub(bottomRightTileOffset + 1, bottomRightTileOffset + tileSize)
+					local flipped = flip2x2Metasprite(metasprite)
 					if metaspriteAddresses[metasprite] then
-						addressesThisFrame[directionName] = metaspriteAddresses[metasprite]
+						addressesAndInfoThisFrame[directionName] = {infoByte = {
+							flipped = false
+						}, offset = metaspriteAddresses[metasprite]}
+					elseif metaspriteAddresses[flipped] then
+						addressesAndInfoThisFrame[directionName] = {infoByte = {
+							flipped = true
+						}, offset = metaspriteAddresses[flipped]}
 					else
 						entitySkinGraphicsDataString = entitySkinGraphicsDataString .. metasprite
-						addressesThisFrame[directionName] = curAddress
+						addressesAndInfoThisFrame[directionName] = {infoByte = {
+							flipped = false
+						}, offset = curAddress}
 						metaspriteAddresses[metasprite] = curAddress
 						curAddress = curAddress + metasprite2x2Size
 					end
 				end
-				addressesThisAnimation.frames[frame] = addressesThisFrame
+				addressesAndInfoThisAnimation.frames[frame] = addressesAndInfoThisFrame
 			end
 		end
 	end
@@ -297,9 +353,10 @@ elseif mode == "build" then
 				entitySkinIncludeDestinationString = entitySkinIncludeDestinationString ..
 					".frame" .. frame .. ":\n"
 				for directionName in directions() do
-					local offset = addresses[animation.nameSnakeCase].frames[frame][directionName]
+					local addressAndInfo = addressesAndInfo[animation.nameSnakeCase].frames[frame][directionName]
 					entitySkinIncludeDestinationString = entitySkinIncludeDestinationString ..
-						indentString .. "dw " .. graphicsDataLabel .. " + " .. offset .. " ; " .. directionName .. "\n"
+						indentString .. "db " .. constructInfoByteString(addressAndInfo.infoByte) .. "\n" ..
+						indentString .. "dw " .. graphicsDataLabel .. " + " .. addressAndInfo.offset .. "\n"
 				end
 			end
 			entitySkinIncludeDestinationString = entitySkinIncludeDestinationString .. "\n"
@@ -308,7 +365,7 @@ elseif mode == "build" then
 
 	entitySkinIncludeDestinationString = entitySkinIncludeDestinationString ..
 		graphicsDataLabel .. ":\n" ..
-		indentString .. "INCBIN \"" .. entitySkinDestinationDirectoryPath .. "graphics.2bpp\"\n"
+		"INCBIN \"" .. entitySkinDestinationDirectoryPath .. "graphics.2bpp\"\n"
 
 	local entitySkinIncludeDestinationFile = io.open(entitySkinIncludeDestinationPath, "w+")
 	exitAssert(entitySkinIncludeDestinationFile, "Could not open file " .. entitySkinIncludeDestinationPath .. " for writing")

@@ -7,7 +7,7 @@ GameInit::
 	; TEMP, TODO properly
 	xor a
 	ld hl, wPlayerPosition
-	ld b, 13
+	ld b, 14
 :
 	ld [hl+], a
 	dec b

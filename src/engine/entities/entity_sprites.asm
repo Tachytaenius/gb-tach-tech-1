@@ -1,12 +1,16 @@
+INCLUDE "structs.inc"
+INCLUDE "structs/entity.inc"
 INCLUDE "hardware.inc"
 INCLUDE "constants/directions.inc"
+INCLUDE "constants/entities.inc"
 INCLUDE "constants/entity_skin_metasprite_flags.inc"
 
 SECTION "Sprite Management", ROM0
 
+; Param h: high byte of entity address
 StepEntityAnimation::
-	; TODO: Actual entity system
-	ld de, wPlayerAnimation.type
+	ld d, h
+	ld e, Entity_AnimationType
 	ld a, [de]
 	ld hl, AnimationTypeTable
 	and a
@@ -24,16 +28,14 @@ StepEntityAnimation::
 	; l: frame count, h: animation speed
 	inc de
 	inc de
-	ASSERT wPlayerAnimation.type + 2 == wPlayerAnimation.timer
+	ASSERT Entity_AnimationType + 2 == Entity_AnimationTimer
 	ld a, [de]
 	add h
 	ld [de], a
 	ret nc ; No need to change frame
 
-	ld a , 1
-	ld [wUpdatePlayerSprite], a
 	dec de
-	ASSERT wPlayerAnimation.timer - 1 == wPlayerAnimation.frame
+	ASSERT Entity_AnimationTimer - 1 == Entity_AnimationFrame
 	ld a, [de]
 	inc a
 	cp l
@@ -41,24 +43,38 @@ StepEntityAnimation::
 	xor a ; Reset frame
 :
 	ld [de], a
+
+	; Set update sprite
+	ld e, Entity_Flags1
+	ld a, [de]
+	or ENTITY_FLAGS1_UPDATE_GRAPHICS_MASK
+	ld [de], a
+
 	ret
 
+; Param h: high byte of entity address
 Update2x2MetaspriteGraphics::
 	ldh a, [hCurBank]
 	push af
 
+	ld l, Entity_SkinId
+	ld a, [hl]
+	push hl ; Used before the BankReturns at the end of this function
+	ld d, h ; See the ld a, [de] uses below
 	ld hl, EntitySkinsPointerTable
-
-	ld a, [wPlayerEntitySkinId] ; TODO: Actual entity system
 	call .table3Bytes
 	ld a, b
 	rst SwapBank
 
-	ld a, [wPlayerAnimation.type]
+	ld e, Entity_AnimationType
+	ld a, [de]
+	inc de
 	call .table2Bytes
-	ld a, [wPlayerAnimation.frame]
+	ASSERT Entity_AnimationType + 1 == Entity_AnimationFrame
+	ld a, [de]
 	call .table2Bytes
-	ld a, [wPlayerDirection]
+	ld e, Entity_Direction
+	ld a, [de]
 	call .table3Bytes
 	; b: info byte for metasprite, hl: metasprite data position
 
@@ -72,8 +88,7 @@ Update2x2MetaspriteGraphics::
 	call CopyBytesWaitVRAM
 	; Set the flags that each sprite uses to be unflipped
 	xor a
-	ld [wPlayerMetaspriteFlags], a
-	jp BankReturn ; Put bank back and return from this function
+	jr .finish
 
 .flipped
 	ld bc, 8*16*2/8
@@ -92,7 +107,10 @@ Update2x2MetaspriteGraphics::
 	call CopyBytesWaitVRAM
 
 	ld a, OAMF_XFLIP
-	ld [wPlayerMetaspriteFlags], a
+.finish
+	pop hl
+	ld l, Entity_MetaspriteFlags
+	ld [hl], a
 	jp BankReturn
 
 ; Double-increment hl a times and deref hl
@@ -128,13 +146,12 @@ Update2x2MetaspriteGraphics::
 	ld l, a
 	ret
 
-; Param hl: position address
+; Param h: high byte of entity to address
 ; Param d: first tile id (offset by 0 to 3 for the individual sprites)
 ; Destroys af bc de hl
 ; d ends up being d + 3 which may be useful for further rendering
 Render2x2Metasprite::
-	; TODO: Actual entity system
-	ld hl, wPlayerPosition
+	ld l, Entity_PositionY
 
 	; Load y as 8.0 into a
 	ld a, [hl+]
@@ -149,6 +166,8 @@ Render2x2Metasprite::
 	; a: y 8.0
 	ld e, a ; Back up base y
 
+	ASSERT Entity_PositionY + 2 == Entity_PositionX
+
 	; Load x as 8.0 into a
 	ld a, [hl+]
 	ld b, [hl]
@@ -161,16 +180,7 @@ Render2x2Metasprite::
 	; a: x 8.0
 	ld b, a ; Back up base x
 
-	; hl: Position + 3
-	; We want to go from position to MetaspriteFlags
-	ASSERT wPlayerMetaspriteFlags - (wPlayerPosition + 3) > 0
-	ld a, wPlayerMetaspriteFlags - (wPlayerPosition + 3)
-	add l
-	ld l, a
-	jr nc, :+
-	inc h
-:
-	; hl: MetaspriteFlags
+	ld l, Entity_MetaspriteFlags
 	ld c, [hl]
 
 	; e: y 8.0, b: x 8.0, d: still first tile id, c: metasprite flags

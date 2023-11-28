@@ -1,8 +1,0 @@
-DEF PLAYER_ACCEL EQU 0.125q4
-DEF PLAYER_MAX_SPEED EQU 0.75q4
-
-; Exact comparisons and values based on tests
-ASSERT PLAYER_ACCEL >= 0.0q4
-ASSERT PLAYER_ACCEL <= 8.0q4
-ASSERT PLAYER_MAX_SPEED >= 0.0q4
-ASSERT PLAYER_MAX_SPEED < 8.0q4 ; 8s place is the sign bit

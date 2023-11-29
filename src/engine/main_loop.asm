@@ -7,34 +7,14 @@ MainLoop::
 	call WaitVBlank
 
 	; Graphics
-
-	; TEMP, TODO properly
-	ld a, [wEntity0_Flags1]
-	and %10 ; TEMP
-	jr z, :+
-	ld h, HIGH(wEntity0)
-	call Update2x2MetaspriteGraphics
-	xor a
-	ld [wEntity0_Flags1], a ; TEMP
-:
-
-	ld h, HIGH(wEntity0)
-	ld d, NUM_TILES
-	call Render2x2Metasprite
+	; Update tile data first to ensure it's more likely that we can do all tile data updates before VBlank ends
+	call UpdateEntityGraphics
+	; These don't require VRAM access (accessing Shadow OAM)
+	call ResetShadowOAM
+	call RenderEntitySprites
 
 	; Update logic
-
 	call UpdateJoypad
-	call ResetShadowOAM
-
-	; TEMP, TODO properly
-	ld h, HIGH(wEntity0)
-	call StepEntityAnimation
-	ld h, HIGH(wEntity0)
-	call ControlEntityMovement
-	ld h, HIGH(wEntity0)
-	call AccelerateEntityToTargetVelocity
-	ld h, HIGH(wEntity0)
-	call ApplyEntityVelocity
+	call ProcessEntityUpdateLogic
 
 	jp MainLoop

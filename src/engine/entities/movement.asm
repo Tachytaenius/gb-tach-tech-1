@@ -4,7 +4,7 @@ INCLUDE "constants/entities.inc"
 INCLUDE "constants/joypad.inc"
 INCLUDE "constants/directions.inc"
 
-SECTION "Movement", ROM0
+SECTION "Entity Movement", ROM0
 
 ; TODO: Improve this system with signed 3.12 velocity and acceleration, dropping the lower byte of velocity when adding velocity to position
 

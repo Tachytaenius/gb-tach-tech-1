@@ -5,51 +5,33 @@ INCLUDE "constants/directions.inc"
 INCLUDE "constants/entities.inc"
 INCLUDE "constants/entity_skin_metasprite_flags.inc"
 
-SECTION "Sprite Management", ROM0
+SECTION "Entity Sprite Management", ROM0
 
-; Param h: high byte of entity address
-StepEntityAnimation::
-	ld d, h
-	ld e, Entity_AnimationType
-	ld a, [de]
-	ld hl, AnimationTypeTable
-	and a
-	jr z, .skip
-.loop ; TODO: Funky address stuff here if the Animation Type Table section is aligned
-	inc hl
-	inc hl
-	dec a
-	jr nz, .loop
-.skip
-	; Deref hl, but new hl is not meant as a pointer
-	ld a, [hl+]
-	ld h, [hl]
-	ld l, a
-	; l: frame count, h: animation speed
-	inc de
-	inc de
-	ASSERT Entity_AnimationType + 2 == Entity_AnimationTimer
-	ld a, [de]
-	add h
-	ld [de], a
-	ret nc ; No need to change frame
-
-	dec de
-	ASSERT Entity_AnimationTimer - 1 == Entity_AnimationFrame
-	ld a, [de]
-	inc a
-	cp l
-	jr nz, :+
-	xor a ; Reset frame
-:
-	ld [de], a
-
-	; Set update sprite
-	ld e, Entity_Flags1
-	ld a, [de]
-	or ENTITY_FLAGS1_UPDATE_GRAPHICS_MASK
-	ld [de], a
-
+; TEMP, only supports 2x2 metasprites for now
+; Param h: high byte of entity
+; Return de: address of tile data
+; Destroys af
+GetEntityTileDataVRAMAddress::
+	ld a, h
+	sub HIGH(wEntity0)
+	; 4 tiles in a 2x2 metasprite, multiply by 4
+	add a
+	add a
+	add NUM_TILES ; After all the background tiles
+	; a: tile id
+	; Now we shift it by 4 bits to get a tile
+	; Output de bits:
+	; d: 1000 <high nybble of input a>
+	; e: <low nybble of input a> 0000
+	swap a
+	ld e, a ; Needs to be anded with $F0
+	and $0F
+	or HIGH(_VRAM)
+	ASSERT HIGH(_VRAM) & $F0 == HIGH(_VRAM) ; Should not need to perform actual addition with HIGH(_VRAM) and the low nybble of a
+	ld d, a 
+	ld a, e
+	and $F0
+	ld e, a
 	ret
 
 ; Param h: high byte of entity address
@@ -57,9 +39,14 @@ Update2x2MetaspriteGraphics::
 	ldh a, [hCurBank]
 	push af
 
+	; Pre-calculate destination for copying
+	call GetEntityTileDataVRAMAddress
+	push de
+
+	ld a, h
+	ldh [hCurEntityAddressHigh], a ; Used before the BankReturns at the end of this function
 	ld l, Entity_SkinId
 	ld a, [hl]
-	push hl ; Used before the BankReturns at the end of this function
 	ld d, h ; See the ld a, [de] uses below
 	ld hl, EntitySkinsPointerTable
 	call .table3Bytes
@@ -84,16 +71,18 @@ Update2x2MetaspriteGraphics::
 
 	; Not flipped
 	ld bc, 16*16*2/8 ; width * height * bits per pixel / bits per byte
-	ld de, _VRAM8000 + NUM_TILES * 8*8*2/8
+	pop de ; Get destination
 	call CopyBytesWaitVRAM
 	; Set the flags that each sprite uses to be unflipped
+	ldh a, [hCurEntityAddressHigh]
+	ld h, a
 	xor a
 	jr .finish
 
 .flipped
 	ld bc, 8*16*2/8
-	ld de, _VRAM8000 + NUM_TILES * 8*8*2/8
-	push hl ; Backup pointer to first two tiles
+	pop de ; Get destination
+	push hl ; Backup pointer to first two tiles to copy
 	; Add 2 tiles' worth of bytes to hl
 	ld a, 8*16*2/8
 	add l
@@ -103,12 +92,13 @@ Update2x2MetaspriteGraphics::
 :
 	; Copy 2 tiles
 	call CopyBytesWaitVRAM
-	pop hl ; Get pointer to first two tiles
+	pop hl ; Get pointer to first two tiles to copy
 	call CopyBytesWaitVRAM
 
+	ldh a, [hCurEntityAddressHigh]
+	ld h, a
 	ld a, OAMF_XFLIP
 .finish
-	pop hl
 	ld l, Entity_MetaspriteFlags
 	ld [hl], a
 	jp BankReturn
@@ -157,8 +147,7 @@ Render2x2Metasprite::
 	ld a, [hl+]
 	ld b, [hl]
 	inc hl
-	ld c, a
-	; bc: y 12.4, hl: x address
+	; ba: y 12.4, hl: x address
 	xor b
 	and $F0
 	xor b
@@ -171,8 +160,7 @@ Render2x2Metasprite::
 	; Load x as 8.0 into a
 	ld a, [hl+]
 	ld b, [hl]
-	ld c, a
-	; bc: x 12.4
+	; ba: x 12.4
 	xor b
 	and $F0
 	xor b
@@ -238,4 +226,6 @@ Render2x2Metasprite::
 	ld a, c
 	ld [hl+], a ; Flags
 
+	ld a, l
+	ldh [hOAMIndex], a
 	ret

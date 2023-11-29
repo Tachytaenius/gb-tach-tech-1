@@ -8,7 +8,6 @@ rwildcard = $(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(
 RM_RF := rm -rf
 MKDIR_P := mkdir -p
 ifeq ($(strip $(shell which rm)),)
-	# Windows *really* tries its hardest to be Special™!
 	RM_RF := -del /q
 	MKDIR_P := -mkdir
 endif
@@ -24,9 +23,10 @@ LUA := lua
 ROM = bin/${ROMNAME}.${ROMEXT}
 
 # Argument constants
+PROJECT_CONFIG =
 INCDIRS  = src/include/ src/include/lib/
 WARNINGS = all extra
-ASFLAGS  = -p ${PADVALUE} $(addprefix -I,${INCDIRS}) $(addprefix -W,${WARNINGS})
+ASFLAGS  = -p ${PADVALUE} $(addprefix -I,${INCDIRS}) $(addprefix -W,${WARNINGS}) $(addprefix -D,$(PROJECT_CONFIG))
 LDFLAGS  = -p ${PADVALUE}
 FIXFLAGS = -p ${PADVALUE} -i "${GAMEID}" -k "${LICENSEE}" -l ${OLDLIC} -m ${MBC} -n ${VERSION} -r ${SRAMSIZE} -t ${TITLE}
 
@@ -59,6 +59,7 @@ VPATH := src
 
 # How to build a ROM.
 # Notice that the build date is always refreshed.
+# Build date must be enabled to be in the ROM, however. Add EMBED_BUILD_DATE to PROJECT_CONFIG in this file.
 bin/%.${ROMEXT}: $(patsubst src/%.asm,obj/%.o,${SRCS})
 	@${MKDIR_P} ${@D}
 	${RGBASM} ${ASFLAGS} -o obj/build_date.o src/assets/build_date.asm

@@ -80,20 +80,20 @@ obj/%.o: obj/%.mk
 	@touch $@
 
 # Convert the animations from the file read by entity-skins to one read by rgbasm
-assets/gfx/animations.inc: src/assets/gfx/animations.txt
+assets/animations.inc: src/assets/animations.txt
 	@${MKDIR_P} ${@D}
-	${LUA} tools/entity-skins.lua animations src/assets/gfx/animations.txt $@
+	${LUA} tools/entity-skins.lua animations src/assets/animations.txt $@
 
 # Ensure that updating the pngs causes a rebuild of the graphics for that entity
 assets/gfx/entity_skins/%/dependencies.mk: src/assets/gfx/entity_skins/%/metadata.txt
 	@${MKDIR_P} ${@D}
-	${LUA} tools/entity-skins.lua dependencies src/assets/gfx/animations.txt src/assets/gfx/entity_skins/$* assets/gfx/entity_skins/$*
+	${LUA} tools/entity-skins.lua dependencies src/assets/animations.txt src/assets/gfx/entity_skins/$* assets/gfx/entity_skins/$*
 
 # Entity skin conversions
 # Uses additional auto-generated dependencies (for the spritesheets) in mk files generated based on file contents
 assets/gfx/entity_skins/%/include.inc assets/gfx/entity_skins/%/graphics.2bpp: src/assets/gfx/entity_skins/%/metadata.txt
 	@${MKDIR_P} ${@D}
-	${LUA} tools/entity-skins.lua build src/assets/gfx/animations.txt src/assets/gfx/entity_skins/$* assets/gfx/entity_skins/$*
+	${LUA} tools/entity-skins.lua build src/assets/animations.txt src/assets/gfx/entity_skins/$* assets/gfx/entity_skins/$*
 
 # Define how to compress files using the PackBits16 codec.
 # (The compressor script requires Python 3.)

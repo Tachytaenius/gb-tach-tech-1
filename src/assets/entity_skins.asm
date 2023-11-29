@@ -1,6 +1,6 @@
 INCLUDE "constants/entity_skin_metasprite_flags.inc" ; For use in the entity skin inc files
 
-INCLUDE "assets/gfx/animations.inc" ; Has ROM data, exports constants
+INCLUDE "assets/animations.inc" ; Has ROM data, exports constants
 
 RSRESET ; Each entity skin file contains an exported constant defined by RB
 

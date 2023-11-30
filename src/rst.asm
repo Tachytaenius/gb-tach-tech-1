@@ -20,4 +20,7 @@ SwapBank::
 	ldh [hCurBank], a
 	ret
 
-; TODO: rst $38 as crash
+SECTION "Crash", ROM0[$0038]
+
+Crash::
+	jp CrashHandler

@@ -1,37 +1,39 @@
 INCLUDE "structs.inc"
 INCLUDE "structs/entity.inc"
 INCLUDE "constants/entities.inc"
+INCLUDE "constants/directions.inc"
 INCLUDE "hardware.inc"
 
 SECTION "Game Init", ROM0
 
 GameInit::
 	; Initialise vars
-	; TEMP, TODO properly
 
-	ld h, HIGH(wEntity0)
-	ld l, Entity_Flags1
-	ld b, NUM_ENTITIES
-	xor a
-:
-	ld [hl], a
-	inc h
-	dec b
-	jr nz, :-
-
-	xor a
-	ld hl, wPlayer
-	ld b, sizeof_Entity
-:
+	call ClearAllEntities
+	ld h, HIGH(wPlayer)
+	ld d, ENTITY_TYPE_PLAYER
+	call NewEntity
+	ld l, Entity_FieldsThatNeedInit
+	ASSERT Entity_FieldsThatNeedInit == Entity_PositionY
+	; First byte of pos y is low, second is high
+	; Pos y's middle nybbles (spread across the two bytes) are the pixel value
+	; I want the pixel value to be SCRN_Y / 2 - 8, hence the stuff here
+	ld a, ((SCRN_Y / 2 - 8) << 4) & $F0
 	ld [hl+], a
-	dec b
-	jr nz, :-
-	ld a, ENTITY_FLAGS1_ENTITY_PRESENT_MASK | ENTITY_FLAGS1_UPDATE_GRAPHICS_MASK
-	ld [wPlayer + Entity_Flags1], a
-	ld a, 0.75q4
-	ld [wPlayer + Entity_MaxSpeed], a
-	ld a, 0.125q4
-	ld [wPlayer + Entity_Acceleration], a
+	ld a, ((SCRN_Y / 2 - 8) >> 4) & $0F
+	ld [hl+], a
+	ASSERT Entity_PositionY + 2 == Entity_PositionX
+	ld a, ((SCRN_X / 2 - 8) << 4) & $F0
+	ld [hl+], a
+	ld a, ((SCRN_X / 2 - 8) >> 4) & $0F
+	ld [hl+], a
+	ASSERT Entity_PositionX + 2 == Entity_Direction
+	ld a, DIR_DOWN
+	ld [hl+], a
+	ASSERT Entity_Direction + 1 == Entity_SkinId
+	ld a, ENTITY_SKIN_KNIGHT
+	ld [hl+], a
+	ASSERT Entity_SkinId + 1 == Entity_FieldsThatNeedInitEnd
 
 	; Load tileset
 	ld bc, TilesetGraphics.end - TilesetGraphics

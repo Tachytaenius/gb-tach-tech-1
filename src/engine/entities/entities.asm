@@ -1,6 +1,7 @@
 INCLUDE "structs.inc"
 INCLUDE "structs/entity.inc"
 INCLUDE "constants/entities.inc"
+INCLUDE "constants/fixed_banks.inc"
 
 FOR I, NUM_ENTITIES
 ASSERT LOW(ENTITY_BASE_ADDRESS) == 0
@@ -113,4 +114,81 @@ ProcessEntityUpdateLogic::
 	dec l
 	jr nz, .loop
 
+	ret
+
+; Destroys af b hl
+ClearAllEntities::
+	ld hl, wEntity0_Flags1
+	ld b, NUM_ENTITIES
+	ASSERT NUM_ENTITIES > 0
+	xor a
+.loop
+	ld [hl], a
+	inc h
+	dec b
+	jr nz, .loop
+	ret
+
+; Destroys af l
+; Return h: High byte of address of first free entity slot
+FindFirstEmptyEntitySlot::
+	ld h, HIGH(wEntity0)
+	ld l, NUM_ENTITIES
+	; hl not to be interpreted as a pair
+	ASSERT NUM_ENTITIES > 0
+.loop
+	push hl
+	ld l, Entity_Flags1
+	ld a, [hl]
+	and ENTITY_FLAGS1_ENTITY_PRESENT_MASK
+	jr nz, .handleLoop
+	; Empty entity found
+	ret
+.handleLoop
+	pop hl
+	inc h
+	dec l
+	jr nz, .loop
+	; No empty entities
+	rst Crash
+	; TODO: Keep a counter of the number of available entities in RAM for use?
+	ret
+
+; Param h: High byte of entity to write to
+; Param d: Entity type id
+NewEntity::
+	ld l, Entity_FieldsInitedByNew
+	ASSERT Entity_FieldsInitedByNew == Entity_Flags
+	ld a, ENTITY_FLAGS1_ENTITY_PRESENT_MASK | ENTITY_FLAGS1_UPDATE_GRAPHICS_MASK
+	ld [hl+], a
+	ASSERT Entity_Flags + 1 == Entity_TypeId
+	ld a, d
+	ld [hl+], a
+	ASSERT Entity_TypeId + 1 == Entity_ZeroInitedFields
+	xor a
+	ld bc, Entity_ZeroInitedFieldsEnd - Entity_ZeroInitedFields
+	ASSERT Entity_ZeroInitedFieldsEnd - Entity_ZeroInitedFields > 0
+	call FillBytes
+	; ASSERT Entity_ZeroInitedFieldsEnd == Entity_FieldsInitedByNewEnd
+	ret
+
+; Param h: high byte of entity address
+; Return a: high byte of entity type data address
+; Changes bank to bank with entity type data in it
+; Destroys f l
+GetEntityTypeDataPointerHighAndSwapBank::
+	; Get entity type id
+	ld l, Entity_TypeId
+	ld a, [hl]
+	; Get typeId / 64, which is the entity type definition's bank minus FIRST_ENTITY_TYPE_BANK. There are 4 banks of 64 entities each, for a total of 256 entities.
+	sra a
+	sra a
+	ld d, a ; Backup unfinished high byte of pointer to field calculation (typeId / 4 + HIGH($4000))
+	swap a
+	and %11
+	ASSERT FIRST_ENTITY_TYPE_BANK == 1
+	inc a
+	rst SwapBank
+	ld a, d
+	add HIGH($4000) ; Move into ROMX pointer rnage
 	ret

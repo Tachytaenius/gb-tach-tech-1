@@ -1,5 +1,6 @@
 INCLUDE "structs.inc"
 INCLUDE "structs/entity.inc"
+INCLUDE "structs/entity_type.inc"
 INCLUDE "constants/entities.inc"
 INCLUDE "constants/joypad.inc"
 INCLUDE "constants/directions.inc"
@@ -10,9 +11,16 @@ SECTION "Entity Movement", ROM0
 
 ; Sets target velocity, direction, and animation between walking or standing
 ; Param h: high byte of entity address
+; Changes bank
 ControlEntityMovement::
-	ld d, h
-	ld e, Entity_MaxSpeed
+	; Load max speed into d
+	; No need to backup current bank, this is part of the main loop
+	call GetEntityTypeDataPointerHighAndSwapBank
+	ld d, a
+	ld e, EntityType_MaxSpeed
+	ld a, [de]
+	ld d, a
+
 	; We load potential new direction into b
 	ld b, DIR_NONE
 
@@ -23,7 +31,7 @@ ControlEntityMovement::
 	jr z, .skipLeft
 	ld b, DIR_LEFT
 	; Negative max speed in a
-	ld a, [de]
+	ld a, d
 	cpl
 	inc a
 	jr .setX
@@ -33,7 +41,7 @@ ControlEntityMovement::
 	and JOY_RIGHT_MASK
 	jr z, .skipRight
 	ld b, DIR_RIGHT
-	ld a, [de] ; Max speed
+	ld a, d ; Max speed
 	jr .setX
 .skipRight
 	xor a
@@ -48,7 +56,7 @@ ControlEntityMovement::
 	jr z, .skipUp
 	ld b, DIR_UP
 	; Negative max speed
-	ld a, [de]
+	ld a, d
 	cpl
 	inc a
 	jr .setY
@@ -58,7 +66,7 @@ ControlEntityMovement::
 	and JOY_DOWN_MASK
 	jr z, .skipDown
 	ld b, DIR_DOWN
-	ld a, [de] ; Max speed
+	ld a, d ; Max speed
 	jr .setY
 .skipDown
 	xor a
@@ -159,6 +167,7 @@ DirectionToPad::
 	ret
 
 ; Param h: High byte of entity to access
+; Changes bank
 AccelerateEntityToTargetVelocity::
 	; y
 	ld l, Entity_TargetVelocityY
@@ -184,8 +193,15 @@ AccelerateEntityToTargetVelocity::
 	; Carry: unset if vel >= target and set if vel < target
 	; Some common code for both upcoming branches
 	ld c, l ; c is free, backup low byte of target velocity pointer to c
-	ld l, Entity_Acceleration
-	ld b, [hl]
+	push af ; This function is getting rewritten (signed 3.12 vel/accel) anyway
+	push de
+	call GetEntityTypeDataPointerHighAndSwapBank
+	ld d, a
+	ld e, EntityType_Acceleration
+	ld a, [de]
+	ld b, a
+	pop de
+	pop af
 	ld l, c ; Restore
 	ld a, [de] ; Velocity
 	; Use carry
@@ -220,6 +236,7 @@ AccelerateEntityToTargetVelocity::
 	jr .setVel
 
 .negativeAcceleration
+	ld b, b
 	; Subtract accel (in b) from velocity (in a) and set velocity to target if result lss than target or if subtraction takes vel from neg to non-neg
 	ld d, a ; Backup pre-subtraction vel
 	sub b

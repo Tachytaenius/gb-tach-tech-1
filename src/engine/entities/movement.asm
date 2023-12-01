@@ -236,7 +236,6 @@ AccelerateEntityToTargetVelocity::
 	jr .setVel
 
 .negativeAcceleration
-	ld b, b
 	; Subtract accel (in b) from velocity (in a) and set velocity to target if result lss than target or if subtraction takes vel from neg to non-neg
 	ld d, a ; Backup pre-subtraction vel
 	sub b

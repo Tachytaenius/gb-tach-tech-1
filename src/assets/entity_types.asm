@@ -19,4 +19,4 @@ SECTION "Entity Types 1", ROMX, BANK[FIRST_ENTITY_TYPE_BANK], ALIGN[8]
 
 DEF ENTITY_TYPE_PLAYER EQU 0
 EXPORT ENTITY_TYPE_PLAYER
-	dstruct EntityType, xEntityTypePlayer, 1.25q4, 0.125q4
+	dstruct EntityType, xEntityTypePlayer, 0.75q4, 0.125q4

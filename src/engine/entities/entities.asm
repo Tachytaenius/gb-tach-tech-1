@@ -181,8 +181,8 @@ GetEntityTypeDataPointerHighAndSwapBank::
 	ld l, Entity_TypeId
 	ld a, [hl]
 	; Get typeId / 64, which is the entity type definition's bank minus FIRST_ENTITY_TYPE_BANK. There are 4 banks of 64 entities each, for a total of 256 entities.
-	sra a
-	sra a
+	srl a
+	srl a
 	ld d, a ; Backup unfinished high byte of pointer to field calculation (typeId / 4 + HIGH($4000))
 	swap a
 	and %11

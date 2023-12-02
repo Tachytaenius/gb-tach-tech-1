@@ -18,12 +18,12 @@
 	bytes 1, AnimationTimer
 
 	alias Velocity
-	bytes 1, VelocityY ; Signed 3.4
-	bytes 1, VelocityX ; Signed 3.4
+	words 1, VelocityY ; Signed 3.12
+	words 1, VelocityX ; Signed 3.12
 
 	alias TargetVelocity
-	bytes 1, TargetVelocityY ; Signed 3.4
-	bytes 1, TargetVelocityX ; Signed 3.4
+	words 1, TargetVelocityY ; Signed 3.12
+	words 1, TargetVelocityX ; Signed 3.12
 
 	alias ZeroInitedFieldsEnd
 

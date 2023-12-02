@@ -8,7 +8,7 @@
 ; TEMP!!!
 ; This should be compiled into 4 banks from:
 ; - Entity type jsons
-; - A json with defaults for missing field values
+; - A json with defaults for missing field values as well as min/max values
 ; - A txt file with a list of entities in order, the first 64 of which go in the first bank, etc
 
 INCLUDE "structs.inc"
@@ -19,4 +19,4 @@ SECTION "Entity Types 1", ROMX, BANK[FIRST_ENTITY_TYPE_BANK], ALIGN[8]
 
 DEF ENTITY_TYPE_PLAYER EQU 0
 EXPORT ENTITY_TYPE_PLAYER
-	dstruct EntityType, xEntityTypePlayer, 0.75q4, 0.125q4
+	dstruct EntityType, xEntityTypePlayer, 0.75q12, 0.0625q12

@@ -2,7 +2,7 @@
 
 	struct EntityType
 
-	bytes 1, MaxSpeed
-	bytes 1, Acceleration
+	words 1, MaxSpeed
+	words 1, Acceleration
 
 	end_struct

@@ -133,15 +133,14 @@ ControlEntityMovement::
 	ld a, [hl] ; Type
 	ASSERT ANIM_TYPE_ID_STANDING == 0
 	and a
-	jr z, :+
+	ret z ; Already walking means let walking animate, if it has any animation
 	; Set update sprite
 	ld l, Entity_Flags1
 	ld a, [hl]
 	or ENTITY_FLAGS1_UPDATE_GRAPHICS_MASK
 	ld [hl], a
 	ld l, Entity_AnimationType ; Put hl back
-	xor a ; Not after label because it would be 0 already if you jumped
-:
+	xor a
 	ld [hl+], a ; Type
 	ASSERT Entity_AnimationType + 1 == Entity_AnimationFrame
 	ld [hl+], a ; Frame

@@ -1,2 +1,3 @@
 AncientKnight ANCIENT_KNIGHT
 standing
+walking

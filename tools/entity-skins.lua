@@ -55,12 +55,12 @@ end
 
 local function flip2x2Metasprite(data)
 	local ret = ""
-	local getTileAhead = false -- Gets flipped immediately
+	local getTilesAhead = false -- Gets flipped immediately
 	for i = 1, #data do
-		if (i - 1) % tileSize == 0 then
-			getTileAhead = not getTileAhead
+		if (i - 1) % (tileSize * 2) == 0 then
+			getTilesAhead = not getTilesAhead
 		end
-		local indexToUse = getTileAhead and i + tileSize or i - tileSize
+		local indexToUse = getTilesAhead and i + tileSize * 2 or i - tileSize * 2
 		local inByte = string.byte(data:sub(indexToUse, indexToUse))
 		local append = reverseByte(inByte)
 		ret = ret .. string.char(append)

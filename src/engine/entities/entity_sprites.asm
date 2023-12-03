@@ -93,6 +93,7 @@ Update2x2MetaspriteGraphics::
 	; Copy 2 tiles
 	call CopyBytesWaitVRAM
 	pop hl ; Get pointer to first two tiles to copy
+	ld bc, 8*16*2/8
 	call CopyBytesWaitVRAM
 
 	ldh a, [hCurEntityAddressHigh]

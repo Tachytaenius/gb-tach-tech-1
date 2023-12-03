@@ -22,7 +22,8 @@ hCurEntityAddressHigh::
 
 SECTION "Entity Functions", ROM0
 
-UpdateEntityGraphics::
+PrepareUpdateEntitiesGraphics::
+	; Gets tile data address and bank and also determines how to draw entity metasprites
 	ld h, HIGH(wEntity0)
 	ld l, NUM_ENTITIES ; Counter, hl not to be interpreted as a pair (so that there only needs to be one push/pop)
 	ASSERT NUM_ENTITIES > 0 ; No check if loop counter is 0
@@ -37,11 +38,7 @@ UpdateEntityGraphics::
 	and ENTITY_FLAGS1_UPDATE_GRAPHICS_MASK
 	jr z, .handleLoop
 	; Present and needing an update!
-	; Set to no longer need an update
-	ld a, [hl]
-	and ~ENTITY_FLAGS1_UPDATE_GRAPHICS_MASK
-	ld [hl], a
-	call Update2x2MetaspriteGraphics ; h is passed in, l is ignored
+	call PrepareUpdateEntityGraphics ; h is passed in, l is ignored
 .handleLoop
 	pop hl
 	; Prepare for next entity
@@ -78,6 +75,34 @@ RenderEntitySprites::
 	inc d
 	inc d
 	jr .handleLoop
+
+UpdateEntitiesTileData::
+	ld h, HIGH(wEntity0)
+	ld l, NUM_ENTITIES ; Counter, hl not to be interpreted as a pair (so that there only needs to be one push/pop)
+	ASSERT NUM_ENTITIES > 0 ; No check if loop counter is 0
+.loop
+	push hl
+	; Is this entity present and needing an update?
+	ld l, Entity_Flags1
+	ld a, [hl]
+	and ENTITY_FLAGS1_ENTITY_PRESENT_MASK
+	jr z, .handleLoop
+	ld a, [hl]
+	and ENTITY_FLAGS1_UPDATE_GRAPHICS_MASK
+	jr z, .handleLoop
+	; Present and needing an update!
+	; Set to no longer need an update
+	ld a, [hl]
+	and ~ENTITY_FLAGS1_UPDATE_GRAPHICS_MASK
+	ld [hl], a
+	call Update2x2MetaspriteGraphics ; h is passed in, l is ignored
+.handleLoop
+	pop hl
+	; Prepare for next entity
+	inc h ; Add HIGH($100)
+	dec l
+	jr nz, .loop
+	ret
 
 ProcessEntityUpdateLogic::
 	ld h, HIGH(wPlayer)

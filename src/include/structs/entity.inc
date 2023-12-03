@@ -47,6 +47,9 @@
 
 	bytes 1, MetaspriteFlags ; OAM flags, same for each individual sprite
 
+	bytes 1, TileDataToCopyBank
+	words 1, TileDataToCopyAddress
+
 	alias NoInitFieldsEnd
 
 

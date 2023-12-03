@@ -28,29 +28,28 @@ GetEntityTileDataVRAMAddress::
 	and $0F
 	or HIGH(_VRAM)
 	ASSERT HIGH(_VRAM) & $F0 == HIGH(_VRAM) ; Should not need to perform actual addition with HIGH(_VRAM) and the low nybble of a
-	ld d, a 
+	ld d, a
 	ld a, e
 	and $F0
 	ld e, a
 	ret
 
-; Param h: high byte of entity address
-Update2x2MetaspriteGraphics::
-	ldh a, [hCurBank]
-	push af
-
-	; Pre-calculate destination for copying
-	call GetEntityTileDataVRAMAddress
-	push de
-
+; Param h: hgh byte of entity address
+; Changes bank
+PrepareUpdateEntityGraphics::
 	ld a, h
-	ldh [hCurEntityAddressHigh], a ; Used before the BankReturns at the end of this function
+	ldh [hCurEntityAddressHigh], a ; Used before returning
 	ld l, Entity_SkinId
 	ld a, [hl]
-	ld d, h ; See the ld a, [de] uses below
+	ld d, h
 	ld hl, EntitySkinsPointerTable
 	call .table3Bytes
 	ld a, b
+	push hl
+	ld h, d
+	ld l, Entity_TileDataToCopyBank
+	ld [hl], a
+	pop hl
 	rst SwapBank
 
 	ld e, Entity_AnimationType
@@ -64,45 +63,36 @@ Update2x2MetaspriteGraphics::
 	ld a, [de]
 	call .table3Bytes
 	; b: info byte for metasprite, hl: metasprite data position
+	ld e, Entity_TileDataToCopyAddress
+	ld a, l
+	ld [de], a
+	inc e
+	ld a, h
+	ld [de], a
 
 	ld a, b
 	and ENTITY_SKIN_METASPRITE_FLAGS_FLIPPED_MASK
 	jr nz, .flipped
 
 	; Not flipped
-	ld bc, 16*16*2/8 ; width * height * bits per pixel / bits per byte
-	pop de ; Get destination
-	call CopyBytesWaitVRAM
-	; Set the flags that each sprite uses to be unflipped
-	ldh a, [hCurEntityAddressHigh]
-	ld h, a
 	xor a
-	jr .finish
+	ld e, Entity_MetaspriteFlags
+	ld [de], a
+	ld e, Entity_Flags1
+	ld a, [de]
+	and ~ENTITY_FLAGS1_SWAP_METASPRITE_COLUMNS_MASK
+	ld [de], a
+	ret
 
 .flipped
-	ld bc, 8*16*2/8
-	pop de ; Get destination
-	push hl ; Backup pointer to first two tiles to copy
-	; Add 2 tiles' worth of bytes to hl
-	ld a, 8*16*2/8
-	add l
-	ld l, a
-	jr nc, :+
-	inc h
-:
-	; Copy 2 tiles
-	call CopyBytesWaitVRAM
-	pop hl ; Get pointer to first two tiles to copy
-	ld bc, 8*16*2/8
-	call CopyBytesWaitVRAM
-
-	ldh a, [hCurEntityAddressHigh]
-	ld h, a
 	ld a, OAMF_XFLIP
-.finish
-	ld l, Entity_MetaspriteFlags
-	ld [hl], a
-	jp BankReturn
+	ld e, Entity_MetaspriteFlags
+	ld [de], a
+	ld e, Entity_Flags1
+	ld a, [de]
+	or ENTITY_FLAGS1_SWAP_METASPRITE_COLUMNS_MASK
+	ld [de], a
+	ret
 
 ; Double-increment hl a times and deref hl
 .table2Bytes
@@ -137,11 +127,27 @@ Update2x2MetaspriteGraphics::
 	ld l, a
 	ret
 
+; Param h: high byte of entity address
+; Changes bank
+Update2x2MetaspriteGraphics::
+	ld l, Entity_TileDataToCopyBank
+	ld a, [hl]
+	rst SwapBank
+
+	call GetEntityTileDataVRAMAddress
+	ld l, Entity_TileDataToCopyAddress
+	ld a, [hl+]
+	ld h, [hl]
+	ld l, a
+	ld bc, 16*16*2/8 ; width * height * bits per pixel / bits per byte
+	jp CopyBytesWaitVRAM
+
 ; Param h: high byte of entity to address
 ; Param d: first tile id (offset by 0 to 3 for the individual sprites)
 ; Destroys af bc de hl
 ; d ends up being d + 3 which may be useful for further rendering
 Render2x2Metasprite::
+	; TODO: Size optimise!
 	ld l, Entity_PositionY
 
 	; Load y as 8.0 into a
@@ -171,6 +177,11 @@ Render2x2Metasprite::
 
 	ld l, Entity_MetaspriteFlags
 	ld c, [hl]
+
+	ld l, Entity_Flags1
+	ld a, [hl]
+	and ENTITY_FLAGS1_SWAP_METASPRITE_COLUMNS_MASK
+	jr nz, .swapped
 
 	; e: y 8.0, b: x 8.0, d: still first tile id, c: metasprite flags
 
@@ -220,6 +231,63 @@ Render2x2Metasprite::
 	ld [hl+], a ; y
 	ld a, b
 	add OAM_X_OFS + 8
+	ld [hl+], a ; x
+	ld a, d
+	; inc d
+	ld [hl+], a ; Tile
+	ld a, c
+	ld [hl+], a ; Flags
+
+	ld a, l
+	ldh [hOAMIndex], a
+	ret
+
+.swapped
+	ld h, HIGH(wShadowOAM)
+	ldh a, [hOAMIndex]
+	ld l, a
+	; Top left
+	ld a, e
+	add OAM_Y_OFS
+	ld [hl+], a ; y
+	ld a, b
+	add OAM_X_OFS + 8
+	ld [hl+], a ; x
+	ld a, d
+	inc d
+	ld [hl+], a ; Tile
+	ld a, c
+	ld [hl+], a ; Flags
+	; Bottom left
+	ld a, e
+	add OAM_Y_OFS + 8
+	ld [hl+], a ; y
+	ld a, b
+	add OAM_X_OFS + 8
+	ld [hl+], a ; x
+	ld a, d
+	inc d
+	ld [hl+], a ; Tile
+	ld a, c
+	ld [hl+], a ; Flags
+	; Top right
+	ld a, e
+	add OAM_Y_OFS
+	ld [hl+], a ; y
+	ld a, b
+	add OAM_X_OFS
+	ld [hl+], a ; x
+	ld a, d
+	inc d
+	ld [hl+], a ; Tile
+	ld a, c
+	ld [hl+], a ; Flags
+	; Bottom right
+	ld a, e
+	add OAM_Y_OFS + 8
+	ld [hl+], a ; y
+	ld a, b
+	add OAM_X_OFS
 	ld [hl+], a ; x
 	ld a, d
 	; inc d

@@ -5,10 +5,10 @@ SECTION "Memory Manipulation", ROM0
 ; Taken from pokecrystal
 
 ; Fills memory with the same value
-; param a: Value to fill
-; param hl: Address to start filling at
-; param bc: Number of bytes to fill
-; destroys af bc hl 
+; Param a: Value to fill
+; Param hl: Address to start filling at
+; Param bc: Number of bytes to fill
+; Destroys f bc hl 
 FillBytes::
 	inc b ; we bail the moment b hits 0, so include the last run
 	inc c ; same thing; include last byte
@@ -23,10 +23,10 @@ FillBytes::
 	ret
 
 ; Copies memory from one location to another
-; param hl: Source address
-; param bc: Number of bytes to copy
-; param de: Destination address
-; destroys af hl bc de
+; Param hl: Source address
+; Param bc: Number of bytes to copy
+; Param de: Destination address
+; Destroys f hl bc de
 CopyBytes::
 	inc b ; we bail the moment b hits 0, so include the last run
 	inc c ; same thing; include last byte
@@ -43,10 +43,10 @@ CopyBytes::
 	ret
 
 ; Copies memory from one location to another as long as VRAM as accessible
-; param hl: Source address
-; param bc: Number of bytes to copy
-; param de: Destination address
-; destroys af hl bc de
+; Param hl: Source address
+; Param bc: Number of bytes to copy
+; Param de: Destination address
+; Destroys f hl bc de
 CopyBytesWaitVRAM::
 	inc b ; we bail the moment b hits 0, so include the last run
 	inc c ; same thing; include last byte

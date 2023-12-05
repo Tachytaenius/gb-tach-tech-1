@@ -10,6 +10,7 @@ MainLoop::
 
 	; Graphics
 	call PrepareUpdateEntitiesGraphics ; Checks for update graphics flag, but doesn't clear it
+	call SetCameraPositionFromPlayer
 	; Update sprites before VBlank so that the OAM DMA done in the VBlank before the next frame is in sync with the UpdateEntityTileData done in that VBlank
 	call ResetShadowOAM
 	call RenderEntitySprites ; Just accessing shadow OAM, no need to worry about VRAM access

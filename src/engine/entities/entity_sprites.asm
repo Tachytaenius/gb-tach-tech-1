@@ -151,11 +151,28 @@ SECTION "Entity Sprite Management ROMX", ROMX
 xRender2x2Metasprite::
 	ld l, Entity_PositionY
 
-	; Load y as 8.0 into a
+	; Get display y from camera y and entity y
 	ld a, [hl+]
-	ld b, [hl]
+	ld c, a
+	ld a, [hl+]
+	ld b, a
+	; bc: y 12.4, hl: x address
+	; Subtract camera position from object y
+	push hl
+	ld hl, wCameraPosition.y
+	; Low byte
+	ld a, c
+	sub [hl]
 	inc hl
-	; ba: y 12.4, hl: x address
+	ld c, a
+	; High byte
+	ld a, b
+	sbc [hl]
+	ld b, a
+	pop hl
+	; bc: display y
+	; Load display y as 8.0 into a
+	ld a, c
 	xor b
 	and $F0
 	xor b
@@ -165,10 +182,28 @@ xRender2x2Metasprite::
 
 	ASSERT Entity_PositionY + 2 == Entity_PositionX
 
-	; Load x as 8.0 into a
+	; Get display x from camera x and entity x
 	ld a, [hl+]
-	ld b, [hl]
-	; ba: x 12.4
+	ld c, a
+	ld a, [hl]
+	ld b, a
+	; bc: x 12.4
+	; Subtract camera position from object x
+	push hl ; For h only
+	ld hl, wCameraPosition.x
+	; Low byte
+	ld a, c
+	sub [hl]
+	inc hl
+	ld c, a
+	; High byte
+	ld a, b
+	sbc [hl]
+	ld b, a
+	pop hl
+	; bc: display x
+	; Load display x as 8.0 into a
+	ld a, c
 	xor b
 	and $F0
 	xor b
@@ -182,14 +217,15 @@ xRender2x2Metasprite::
 	ld l, Entity_Flags1
 	ld a, [hl]
 	and ENTITY_FLAGS1_SWAP_METASPRITE_COLUMNS_MASK
+	; Defer jump
+	ld h, HIGH(wShadowOAM)
+	ldh a, [hOAMIndex]
+	ld l, a
 	jr nz, .swapped
 
 	; e: y 8.0, b: x 8.0, d: still first tile id, c: metasprite flags
 
 	; Now write to shadow OAM
-	ld h, HIGH(wShadowOAM)
-	ldh a, [hOAMIndex]
-	ld l, a
 	; Top left
 	ld a, e
 	add OAM_Y_OFS
@@ -244,9 +280,6 @@ xRender2x2Metasprite::
 	ret
 
 .swapped
-	ld h, HIGH(wShadowOAM)
-	ldh a, [hOAMIndex]
-	ld l, a
 	; Top left
 	ld a, e
 	add OAM_Y_OFS

@@ -10,6 +10,7 @@ GameInit::
 	; Initialise vars
 
 	call ClearAllEntities
+
 	ld h, HIGH(wPlayer)
 	ld d, ENTITY_TYPE_PLAYER
 	call NewEntity
@@ -18,14 +19,11 @@ GameInit::
 	; First byte of pos y is low, second is high
 	; Pos y's middle nybbles (spread across the two bytes) are the pixel value
 	; I want the pixel value to be SCRN_Y / 2 - 8, hence the stuff here
-	ld a, ((SCRN_Y / 2 - 8) << 4) & $F0
+	xor a
 	ld [hl+], a
-	ld a, ((SCRN_Y / 2 - 8) >> 4) & $0F
 	ld [hl+], a
 	ASSERT Entity_PositionY + 2 == Entity_PositionX
-	ld a, ((SCRN_X / 2 - 8) << 4) & $F0
 	ld [hl+], a
-	ld a, ((SCRN_X / 2 - 8) >> 4) & $0F
 	ld [hl+], a
 	ASSERT Entity_PositionX + 2 == Entity_Direction
 	ld a, DIR_DOWN
@@ -34,6 +32,23 @@ GameInit::
 	ld a, ENTITY_SKIN_KNIGHT
 	ld [hl+], a
 	ASSERT Entity_SkinId + 1 == Entity_FieldsThatNeedInitEnd
+
+	ld h, HIGH(wEntity1)
+	ld d, ENTITY_TYPE_PLAYER
+	call NewEntity
+	ld l, Entity_FieldsThatNeedInit
+	ld a, ((SCRN_Y / 2 - 8) << 4) & $F0
+	ld [hl+], a
+	ld a, ((SCRN_Y / 2 - 8) >> 4) & $0F
+	ld [hl+], a
+	ld a, ((SCRN_X / 2 - 8) << 4) & $F0
+	ld [hl+], a
+	ld a, ((SCRN_X / 2 - 8) >> 4) & $0F
+	ld [hl+], a
+	ld a, DIR_DOWN
+	ld [hl+], a
+	ld a, ENTITY_SKIN_ANCIENT_KNIGHT
+	ld [hl+], a
 
 	; Load tileset
 	ld bc, TilesetGraphics.end - TilesetGraphics

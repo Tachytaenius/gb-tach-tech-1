@@ -19,7 +19,9 @@ SECTION "Tileset Graphics", ROM0
 TilesetGraphics::
 	RSRESET
 	define_tile TILE_EMPTY, "empty"
-	define_tile TILE_POINT, "point"
+	define_tile TILE_EMPTY_BLACK, "empty_black"
+	define_tile TILE_GROUND, "ground"
+	define_tile TILE_BRICKS, "bricks"
 .end::
 
 DEF NUM_TILES RB 0

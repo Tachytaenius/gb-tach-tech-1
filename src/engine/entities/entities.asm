@@ -47,7 +47,10 @@ PrepareUpdateEntitiesGraphics::
 	jr nz, .loop
 	ret
 
+; Changes bank
 RenderEntitySprites::
+	ld a, BANK(xRender2x2Metasprite)
+	rst SwapBank
 	ld h, HIGH(wEntity0)
 	ld l, NUM_ENTITIES
 	; hl is not to be interpreted as a pair
@@ -59,7 +62,7 @@ RenderEntitySprites::
 	ld a, [hl]
 	and ENTITY_FLAGS1_ENTITY_PRESENT_MASK
 	jr z, .incD4TimesHandleLoop
-	call Render2x2Metasprite
+	call xRender2x2Metasprite
 	inc d
 .handleLoop
 	pop hl

@@ -5,7 +5,7 @@ INCLUDE "constants/directions.inc"
 INCLUDE "constants/entities.inc"
 INCLUDE "constants/entity_skin_metasprite_flags.inc"
 
-SECTION "Entity Sprite Management", ROM0
+SECTION "Entity Sprite Management ROM0", ROM0
 
 ; TEMP, only supports 2x2 metasprites for now
 ; Param h: high byte of entity
@@ -34,7 +34,7 @@ GetEntityTileDataVRAMAddress::
 	ld e, a
 	ret
 
-; Param h: hgh byte of entity address
+; Param h: high byte of entity address
 ; Changes bank
 PrepareUpdateEntityGraphics::
 	ld a, h
@@ -142,12 +142,13 @@ Update2x2MetaspriteGraphics::
 	ld bc, 16*16*2/8 ; width * height * bits per pixel / bits per byte
 	jp CopyBytesWaitVRAM
 
+SECTION "Entity Sprite Management ROMX", ROMX
+
 ; Param h: high byte of entity to address
 ; Param d: first tile id (offset by 0 to 3 for the individual sprites)
 ; Destroys af bc de hl
 ; d ends up being d + 3 which may be useful for further rendering
-Render2x2Metasprite::
-	; TODO: Size optimise!
+xRender2x2Metasprite::
 	ld l, Entity_PositionY
 
 	; Load y as 8.0 into a

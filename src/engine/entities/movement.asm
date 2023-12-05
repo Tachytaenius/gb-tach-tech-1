@@ -16,6 +16,7 @@ SECTION "Entity Movement", ROM0
 ; Sets target velocity, direction, and animation between walking or standing
 ; Param h: high byte of entity address
 ; Changes bank
+; Uses HRAM temporary variables
 ControlEntityMovement::
 	call GetEntityTypeDataPointerHighAndSwapBank
 	ld d, a

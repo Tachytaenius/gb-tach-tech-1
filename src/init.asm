@@ -45,9 +45,13 @@ Init::
 	ldh [rBGP], a
 	ldh [rOBP0], a
 
-	; Clear expecting VBlank flag
+	; Clear expecting VBlank flag and shadow registers
 	xor a
 	ldh [hExpectingVBlank], a
+	ld hl, hShadowRegisters
+	ld [hl+], a
+	ld [hl], a
+	ASSERT hShadowRegisters + 2 == hShadowRegistersEnd
 	; Clear joypad
 	ld hl, hJoypad
 	ld [hl+], a

@@ -1,19 +1,38 @@
-SECTION "Expecting VBlank", HRAM
+INCLUDE "hardware.inc"
+
+SECTION "VBlank Memory", HRAM
 
 hExpectingVBlank::
 	ds 1
 
-SECTION "VBlank Interrupt Handler", ROM0[$40]
+hShadowRegisters::
+hShadowSCY::
+	ds 1
+hShadowSCX::
+	ds 1
+hShadowRegistersEnd::
+
+SECTION "VBlank Interrupt Handler Entry", ROM0[$40]
 
 VBlankInterruptHandler::
 	push af
+	jp VBlank
+
+SECTION "VBlank Functions", ROM0
+
+VBlank::
+	; Update shadow scroll registers
+	ldh a, [hShadowSCY]
+	ldh [rSCY], a
+	ldh a, [hShadowSCX]
+	ldh [rSCX], a
+	
 	ldh a, [hExpectingVBlank]
 	and a
 	jp nz, VBlankNotLagging
+
 	pop af
 	reti
-
-SECTION "VBlank Functions", ROM0
 
 ; Destroys af
 VBlankNotLagging:

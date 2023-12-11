@@ -151,15 +151,15 @@ SECTION "Entity Sprite Management ROMX", ROMX
 xRender2x2Metasprite::
 	ld l, Entity_PositionY
 
-	; Get display y from camera y and entity y
+	; Get display y from camera obj box y and entity y
 	ld a, [hl+]
 	ld c, a
 	ld a, [hl+]
 	ld b, a
 	; bc: y 12.4, hl: x address
-	; Subtract camera position from object y
+	; Subtract camera obj box y from object y
 	push hl
-	ld hl, wCameraPosition.y
+	ld hl, wCameraObjBoxPosition.y
 	; Low byte
 	ld a, c
 	sub [hl]
@@ -170,27 +170,31 @@ xRender2x2Metasprite::
 	sbc [hl]
 	ld b, a
 	pop hl
-	; bc: display y
-	; Load display y as 8.0 into a
+	cp $10 ; Is it too far away to render?
+	ret nc
+	; bc: y relative to camera obj box
+	; Load bc's value as 8.0 into a
 	ld a, c
 	xor b
 	and $F0
 	xor b
 	swap a
+	; Offset it
+	add LOW(OAM_Y_OFS - (256 - SCRN_Y) / 2)
 	; a: y 8.0
 	ld e, a ; Back up base y
 
 	ASSERT Entity_PositionY + 2 == Entity_PositionX
 
-	; Get display x from camera x and entity x
+	; Get display x from camera obj box x and entity x
 	ld a, [hl+]
 	ld c, a
 	ld a, [hl]
 	ld b, a
 	; bc: x 12.4
-	; Subtract camera position from object x
-	push hl ; For h only
-	ld hl, wCameraPosition.x
+	; Subtract camera obj box x from object x
+	push hl
+	ld hl, wCameraObjBoxPosition.x
 	; Low byte
 	ld a, c
 	sub [hl]
@@ -201,13 +205,17 @@ xRender2x2Metasprite::
 	sbc [hl]
 	ld b, a
 	pop hl
-	; bc: display x
-	; Load display x as 8.0 into a
+	cp $10 ; Is it too far away to render?
+	ret nc
+	; bc: x relative to camera obj box
+	; Load bc's value as 8.0 into a
 	ld a, c
 	xor b
 	and $F0
 	xor b
 	swap a
+	; Offset it
+	add LOW(OAM_X_OFS - (256 - SCRN_X) / 2)
 	; a: x 8.0
 	ld b, a ; Back up base x
 
@@ -228,10 +236,8 @@ xRender2x2Metasprite::
 	; Now write to shadow OAM
 	; Top left
 	ld a, e
-	add OAM_Y_OFS
 	ld [hl+], a ; y
 	ld a, b
-	add OAM_X_OFS
 	ld [hl+], a ; x
 	ld a, d
 	inc d
@@ -240,10 +246,9 @@ xRender2x2Metasprite::
 	ld [hl+], a ; Flags
 	; Bottom left
 	ld a, e
-	add OAM_Y_OFS + 8
+	add 8
 	ld [hl+], a ; y
 	ld a, b
-	add OAM_X_OFS
 	ld [hl+], a ; x
 	ld a, d
 	inc d
@@ -252,10 +257,9 @@ xRender2x2Metasprite::
 	ld [hl+], a ; Flags
 	; Top right
 	ld a, e
-	add OAM_Y_OFS
 	ld [hl+], a ; y
 	ld a, b
-	add OAM_X_OFS + 8
+	add 8
 	ld [hl+], a ; x
 	ld a, d
 	inc d
@@ -264,10 +268,10 @@ xRender2x2Metasprite::
 	ld [hl+], a ; Flags
 	; Bottom right
 	ld a, e
-	add OAM_Y_OFS + 8
+	add 8
 	ld [hl+], a ; y
 	ld a, b
-	add OAM_X_OFS + 8
+	add 8
 	ld [hl+], a ; x
 	ld a, d
 	; inc d
@@ -282,10 +286,9 @@ xRender2x2Metasprite::
 .swapped
 	; Top left
 	ld a, e
-	add OAM_Y_OFS
 	ld [hl+], a ; y
 	ld a, b
-	add OAM_X_OFS + 8
+	add 8
 	ld [hl+], a ; x
 	ld a, d
 	inc d
@@ -294,10 +297,10 @@ xRender2x2Metasprite::
 	ld [hl+], a ; Flags
 	; Bottom left
 	ld a, e
-	add OAM_Y_OFS + 8
+	add 8
 	ld [hl+], a ; y
 	ld a, b
-	add OAM_X_OFS + 8
+	add 8
 	ld [hl+], a ; x
 	ld a, d
 	inc d
@@ -306,10 +309,8 @@ xRender2x2Metasprite::
 	ld [hl+], a ; Flags
 	; Top right
 	ld a, e
-	add OAM_Y_OFS
 	ld [hl+], a ; y
 	ld a, b
-	add OAM_X_OFS
 	ld [hl+], a ; x
 	ld a, d
 	inc d
@@ -318,10 +319,9 @@ xRender2x2Metasprite::
 	ld [hl+], a ; Flags
 	; Bottom right
 	ld a, e
-	add OAM_Y_OFS + 8
+	add 8
 	ld [hl+], a ; y
 	ld a, b
-	add OAM_X_OFS
 	ld [hl+], a ; x
 	ld a, d
 	; inc d

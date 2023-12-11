@@ -1,5 +1,6 @@
 INCLUDE "structs.inc"
 INCLUDE "structs/entity.inc"
+INCLUDE "structs/entity_type.inc"
 INCLUDE "constants/entities.inc"
 INCLUDE "constants/fixed_banks.inc"
 
@@ -184,14 +185,27 @@ FindFirstEmptyEntitySlot::
 
 ; Param h: High byte of entity to write to
 ; Param d: Entity type id
+; Changes bank
 NewEntity::
-	ld l, Entity_FieldsInitedByNew
-	ASSERT Entity_FieldsInitedByNew == Entity_Flags
+	; First copy data from entity type in ROMX to entity in WRAM
+	ld l, Entity_TypeId
+	ld [hl], d
+	call GetEntityTypeDataPointerHighAndSwapBank
+	ld d, h ; de is destination
+	ld e, Entity_CopiedData
+	ld h, a ; hl is source
+	ld l, EntityType_CopiedData
+	ld bc, Entity_CopiedDataEnd - Entity_CopiedData
+	call CopyBytes
+
+	; Use hl as destination to initialise more fields
+	ld h, d
+	ASSERT Entity_CopiedDataEnd == EntityType_CopiedDataEnd ; Would need to load e into l otherwise
+	ASSERT Entity_CopiedDataEnd == Entity_Flags
 	ld a, ENTITY_FLAGS1_ENTITY_PRESENT_MASK | ENTITY_FLAGS1_UPDATE_GRAPHICS_MASK
 	ld [hl+], a
 	ASSERT Entity_Flags + 1 == Entity_TypeId
-	ld a, d
-	ld [hl+], a
+	inc hl
 	ASSERT Entity_TypeId + 1 == Entity_ZeroInitedFields
 	xor a
 	ld bc, Entity_ZeroInitedFieldsEnd - Entity_ZeroInitedFields
@@ -203,7 +217,7 @@ NewEntity::
 ; Param h: high byte of entity address
 ; Return a: high byte of entity type data address
 ; Changes bank to bank with entity type data in it
-; Destroys f l
+; Destroys f d l
 GetEntityTypeDataPointerHighAndSwapBank::
 	; Get entity type id
 	ld l, Entity_TypeId

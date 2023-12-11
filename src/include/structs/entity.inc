@@ -1,9 +1,15 @@
 ; structs.inc should be included by the files that include this one
 
+INCLUDE "structs/copied_entity_type_data.inc"
+
 	struct Entity
 
 
 	alias FieldsInitedByNew
+
+	alias CopiedData
+	extends CopiedEntityTypeData
+	alias CopiedDataEnd
 
 	alias Flags
 	bytes 1, Flags1

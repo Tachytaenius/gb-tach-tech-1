@@ -18,12 +18,10 @@ SECTION "Entity Movement", ROM0
 ; Changes bank
 ; Uses HRAM temporary variables
 ControlEntityMovement::
-	call GetEntityTypeDataPointerHighAndSwapBank
-	ld d, a
-	ld e, EntityType_MaxSpeed
-	; de: pointer to max speed
+	ld d, h
+	ld e, Entity_MaxSpeed
 	ld l, Entity_TargetVelocityY
-	; hl: pointer to target velocity
+	; hl: pointer to target velocity, de: pointer to max speed
 
 	; We load potential new direction into [hCurPotentialDirection]
 
@@ -245,10 +243,9 @@ AccelerateEntityToTargetVelocity::
 	; Gain access to acceleration
 	push de ; Going to use de
 	ld b, l ; Backup low byte of pointer to velocity
-	call GetEntityTypeDataPointerHighAndSwapBank
 	ld l, b
-	ld d, a
-	ld e, EntityType_Acceleration
+	ld d, h
+	ld e, Entity_Acceleration
 	; Low byte
 	ld a, [de]
 	inc e
@@ -309,10 +306,9 @@ AccelerateEntityToTargetVelocity::
 	; Gain access to acceleration
 	push de ; Going to use de
 	ld b, l ; Backup low byte of pointer to velocity
-	call GetEntityTypeDataPointerHighAndSwapBank
 	ld l, b
-	ld d, a
-	ld e, EntityType_Acceleration
+	ld d, h
+	ld e, Entity_Acceleration
 	; Low byte
 	ld a, [de]
 	inc e

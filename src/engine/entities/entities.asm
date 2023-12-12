@@ -3,6 +3,7 @@ INCLUDE "structs/entity.inc"
 INCLUDE "structs/entity_type.inc"
 INCLUDE "constants/entities.inc"
 INCLUDE "constants/fixed_banks.inc"
+INCLUDE "macros/bank.inc"
 
 FOR I, NUM_ENTITIES
 ASSERT LOW(ENTITY_BASE_ADDRESS) == 0
@@ -110,7 +111,7 @@ UpdateEntitiesTileData::
 
 ProcessEntityUpdateLogic::
 	ld h, HIGH(wPlayer)
-	call ControlEntityMovement
+	bankcall_no_pop xControlEntityMovement
 
 	ld a, HIGH(wEntity0)
 	ldh [hCurEntityAddressHigh], a
@@ -130,10 +131,17 @@ ProcessEntityUpdateLogic::
 	call StepEntityAnimation
 	ldh a, [hCurEntityAddressHigh]
 	ld h, a
-	call AccelerateEntityToTargetVelocity
+	ld a, BANK(xHandleEntityWalkAnimation)
+	rst SwapBank
+	call xHandleEntityWalkAnimation
 	ldh a, [hCurEntityAddressHigh]
 	ld h, a
-	call ApplyEntityVelocity
+	ASSERT BANK(xHandleEntityWalkAnimation) == BANK(xAccelerateEntityToTargetVelocity)
+	call xAccelerateEntityToTargetVelocity
+	ldh a, [hCurEntityAddressHigh]
+	ld h, a
+	ASSERT BANK(xAccelerateEntityToTargetVelocity) == BANK(xApplyEntityVelocity)
+	call xApplyEntityVelocity
 
 .handleLoop
 	pop hl

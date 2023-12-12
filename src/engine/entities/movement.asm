@@ -11,13 +11,12 @@ SECTION UNION "HRAM Temporary Variables", HRAM
 hCurPotentialDirection:
 	ds 1
 
-SECTION "Entity Movement", ROM0
+SECTION "Entity Movement", ROMX
 
-; Sets target velocity, direction, and animation between walking or standing
+; Sets target velocity and direction according to player input
 ; Param h: high byte of entity address
-; Changes bank
 ; Uses HRAM temporary variables
-ControlEntityMovement::
+xControlEntityMovement::
 	ld d, h
 	ld e, Entity_MaxSpeed
 	ld l, Entity_TargetVelocityY
@@ -88,15 +87,40 @@ ControlEntityMovement::
 	; Would be cool to have an option to prioritise new directions instead of old ones (TODO?)
 	ldh a, [hCurPotentialDirection]
 	cp DIR_NONE
-	jr z, .notWalking
+	ret z
 	ld l, Entity_Direction
 	ld a, [hl]
-	call DirectionToPad
-	ld c, a
+	; Get direction as pad input
+	and a
+	jr nz, :+
+	ASSERT DIR_RIGHT == 0
+	ld c, JOY_RIGHT_MASK
+	jr .doneDirectionToPad
+:
+	dec a
+	jr nz, :+
+	ASSERT DIR_DOWN == 1
+	ld c, JOY_DOWN_MASK
+	jr .doneDirectionToPad
+:
+	dec a
+	jr nz, :+
+	ASSERT DIR_LEFT == 2
+	ld c, JOY_LEFT_MASK
+	jr .doneDirectionToPad
+:
+	dec a
+	jr nz, :+
+	ASSERT DIR_UP == 3
+	ld c, JOY_UP_MASK
+	jr .doneDirectionToPad
+:
+	ld c, 0
+.doneDirectionToPad
 	ASSERT JOY_RIGHT_MASK | JOY_DOWN_MASK | JOY_LEFT_MASK | JOY_UP_MASK == %1111 
 	ldh a, [hJoypad.down] ; No need to filter this to the low nybble (joypad)
 	and c
-	jr nz, .handleAnimation ; Old direction still held, stick with it
+	ret nz ; Old direction still held, stick with it
 	ldh a, [hCurPotentialDirection]
 	ld [hl], a ; hl is still entity direction
 	; Set update sprite
@@ -104,8 +128,58 @@ ControlEntityMovement::
 	ld a, [hl]
 	or ENTITY_FLAGS1_UPDATE_GRAPHICS_MASK
 	ld [hl], a
+	ret
 
-.handleAnimation
+.getNegativeMaxSpeedInBc
+	; de returns to its original value
+	; Two's complement [de] into bc
+	ld a, [de]
+	inc e ; We know e won't be 255 due to entity type data alignment
+	cpl
+	inc a
+	ld c, a
+	ld a, [de]
+	cpl
+	; If previous inc left a on zero then carry an inc
+	jr z, :+
+	inc a
+:
+	ld b, a
+	dec e
+	ret
+
+.getMaxSpeedInBc
+	; de returns to its original value
+	ld a, [de]
+	inc e
+	ld c, a
+	ld a, [de]
+	dec e
+	ld b, a
+	ret
+
+; Param h: High byte of entity address
+xHandleEntityWalkAnimation::
+	ld l, Entity_TargetVelocityY
+	xor a
+	; y low
+	or [hl]
+	jr nz, .walking
+	inc hl
+	; y high
+	or [hl]
+	jr nz, .walking
+	inc hl
+	ASSERT Entity_TargetVelocityY + 2 == Entity_TargetVelocityX
+	; x low
+	or [hl]
+	jr nz, .walking
+	inc hl
+	; x high
+	or [hl]
+	jr z, .notWalking
+
+.walking
 	ld l, Entity_AnimationType
 	ld a, [hl]
 	cp ANIM_TYPE_ID_WALKING
@@ -147,65 +221,8 @@ ControlEntityMovement::
 	ld [hl], a ; Timer
 	ret
 
-.getNegativeMaxSpeedInBc
-	; de returns to its original value
-	; Two's complement [de] into bc
-	ld a, [de]
-	inc e ; We know e won't be 255 due to entity type data alignment
-	cpl
-	inc a
-	ld c, a
-	ld a, [de]
-	cpl
-	; If previous inc left a on zero then carry an inc
-	jr z, :+
-	inc a
-:
-	ld b, a
-	dec e
-	ret
-
-.getMaxSpeedInBc
-	; de returns to its original value
-	ld a, [de]
-	inc e
-	ld c, a
-	ld a, [de]
-	dec e
-	ld b, a
-	ret
-
-DirectionToPad::
-	and a
-	jr nz, :+
-	ASSERT DIR_RIGHT == 0
-	ld a, JOY_RIGHT_MASK
-	ret
-:
-	dec a
-	jr nz, :+
-	ASSERT DIR_DOWN == 1
-	ld a, JOY_DOWN_MASK
-	ret
-:
-	dec a
-	jr nz, :+
-	ASSERT DIR_LEFT == 2
-	ld a, JOY_LEFT_MASK
-	ret
-:
-	dec a
-	jr nz, :+
-	ASSERT DIR_UP == 3
-	ld a, JOY_UP_MASK
-	ret
-:
-	xor a
-	ret
-
 ; Param h: High byte of entity to access (also expected to be in [hCurEntityAddressHigh])
-; Changes bank
-AccelerateEntityToTargetVelocity::
+xAccelerateEntityToTargetVelocity::
 	ld l, Entity_VelocityY
 	ld d, h
 	ld e, Entity_TargetVelocityY
@@ -360,7 +377,7 @@ AccelerateEntityToTargetVelocity::
 	ret
 
 ; Param h: high byte of entity to access
-ApplyEntityVelocity::
+xApplyEntityVelocity::
 	; We are adding signed 3.12 into unsigned 12.4
 	; We only need to consider the high byte of velocity
 	ld l, Entity_PositionY

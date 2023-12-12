@@ -8,6 +8,8 @@ INCLUDE "macros/bank.inc"
 SECTION "Game Init", ROM0
 
 GameInit::
+	; If the screen is left on during this function, then the background should also be cleared before loading the tileset (as well as using CopyBytesWaitVRAM)
+
 	; Load tileset
 	ld bc, TilesetGraphics.end - TilesetGraphics
 	ld hl, TilesetGraphics

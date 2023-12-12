@@ -15,8 +15,16 @@ INCLUDE "structs.inc"
 INCLUDE "structs/entity_type.inc"
 INCLUDE "constants/fixed_banks.inc"
 
-SECTION "Entity Types 1", ROMX, BANK[FIRST_ENTITY_TYPE_BANK], ALIGN[8]
+RSRESET
 
-DEF ENTITY_TYPE_PLAYER EQU 0
+SECTION "Entity Types 1 Player", ROMX[$4000], BANK[FIRST_ENTITY_TYPE_BANK]
+
+DEF ENTITY_TYPE_PLAYER RB
 EXPORT ENTITY_TYPE_PLAYER
 	dstruct EntityType, xEntityTypePlayer, 0.75q12, 0.0625q12
+
+SECTION "Entity Types 1 AncientKnight", ROMX[$4100], BANK[FIRST_ENTITY_TYPE_BANK]
+
+DEF ENTITY_TYPE_ANCIENT_KNIGHT RB
+EXPORT ENTITY_TYPE_ANCIENT_KNIGHT
+	dstruct EntityType, xEntityTypeAncientKnight, 0.5q12, 0.125q12

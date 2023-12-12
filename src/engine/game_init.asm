@@ -43,7 +43,7 @@ GameInit::
 	ASSERT Entity_SkinId + 1 == Entity_FieldsThatNeedInitEnd
 
 	ld h, HIGH(wEntity1)
-	ld d, ENTITY_TYPE_PLAYER
+	ld d, ENTITY_TYPE_ANCIENT_KNIGHT
 	call NewEntity
 	ld l, Entity_FieldsThatNeedInit
 	DEF START_Y = (SCRN_Y / 2) << 4 - 8.0q4

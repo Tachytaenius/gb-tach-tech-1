@@ -217,20 +217,21 @@ NewEntity::
 ; Param h: high byte of entity address
 ; Return a: high byte of entity type data address
 ; Changes bank to bank with entity type data in it
-; Destroys f d l
+; Destroys f l
 GetEntityTypeDataPointerHighAndSwapBank::
 	; Get entity type id
+	; Top two bits of type are which bank
 	ld l, Entity_TypeId
 	ld a, [hl]
-	; Get typeId / 64, which is the entity type definition's bank minus FIRST_ENTITY_TYPE_BANK. There are 4 banks of 64 entities each, for a total of 256 entities.
-	srl a
-	srl a
-	ld d, a ; Backup unfinished high byte of pointer to field calculation (typeId / 4 + HIGH($4000))
+	and %11000000
 	swap a
-	and %11
+	srl a
+	srl a
 	ASSERT FIRST_ENTITY_TYPE_BANK == 1
-	inc a
+	inc a ; Into actual range
 	rst SwapBank
-	ld a, d
-	add HIGH($4000) ; Move into ROMX pointer rnage
+	; Bottom six bits of type are which entry in that bank
+	ld a, [hl]
+	and %00111111
+	add HIGH($4000) ; Into ROMX range
 	ret

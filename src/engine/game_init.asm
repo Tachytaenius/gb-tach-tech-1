@@ -20,13 +20,16 @@ GameInit::
 
 	call ClearAllEntities
 
+	DEF PLAYER_START_Y = 128.0q4
+	DEF PLAYER_START_X = 128.0q4
+
 	ld h, HIGH(wPlayer)
 	ld d, ENTITY_TYPE_PLAYER
 	call NewEntity
 	ld l, Entity_FieldsThatNeedInit
 	ASSERT Entity_FieldsThatNeedInit == Entity_PositionY
-	DEF START_Y = 0.0q4
-	DEF START_X = 0.0q4
+	DEF START_Y = PLAYER_START_Y
+	DEF START_X = PLAYER_START_X
 	ld a, LOW(START_Y)
 	ld [hl+], a
 	ld a, HIGH(START_Y)
@@ -48,8 +51,65 @@ GameInit::
 	ld d, ENTITY_TYPE_ANCIENT_KNIGHT
 	call NewEntity
 	ld l, Entity_FieldsThatNeedInit
-	DEF START_Y = (SCRN_Y / 2) << 4 - 8.0q4
-	DEF START_X = (SCRN_X / 2) << 4 - 8.0q4
+	DEF START_Y = PLAYER_START_Y - 64.0q4
+	DEF START_X = PLAYER_START_X - 64.0q4
+	ld a, LOW(START_Y)
+	ld [hl+], a
+	ld a, HIGH(START_Y)
+	ld [hl+], a
+	ld a, LOW(START_X)
+	ld [hl+], a
+	ld a, HIGH(START_X)
+	ld [hl+], a
+	ld a, DIR_DOWN
+	ld [hl+], a
+	ld a, ENTITY_SKIN_ANCIENT_KNIGHT
+	ld [hl+], a
+
+	ld h, HIGH(wEntity2)
+	ld d, ENTITY_TYPE_ANCIENT_KNIGHT
+	call NewEntity
+	ld l, Entity_FieldsThatNeedInit
+	DEF START_Y = PLAYER_START_Y - 64.0q4
+	DEF START_X = PLAYER_START_X + 64.0q4
+	ld a, LOW(START_Y)
+	ld [hl+], a
+	ld a, HIGH(START_Y)
+	ld [hl+], a
+	ld a, LOW(START_X)
+	ld [hl+], a
+	ld a, HIGH(START_X)
+	ld [hl+], a
+	ld a, DIR_DOWN
+	ld [hl+], a
+	ld a, ENTITY_SKIN_ANCIENT_KNIGHT
+	ld [hl+], a
+
+	ld h, HIGH(wEntity3)
+	ld d, ENTITY_TYPE_ANCIENT_KNIGHT
+	call NewEntity
+	ld l, Entity_FieldsThatNeedInit
+	DEF START_Y = PLAYER_START_Y + 64.0q4
+	DEF START_X = PLAYER_START_X - 64.0q4
+	ld a, LOW(START_Y)
+	ld [hl+], a
+	ld a, HIGH(START_Y)
+	ld [hl+], a
+	ld a, LOW(START_X)
+	ld [hl+], a
+	ld a, HIGH(START_X)
+	ld [hl+], a
+	ld a, DIR_DOWN
+	ld [hl+], a
+	ld a, ENTITY_SKIN_ANCIENT_KNIGHT
+	ld [hl+], a
+
+	ld h, HIGH(wEntity4)
+	ld d, ENTITY_TYPE_ANCIENT_KNIGHT
+	call NewEntity
+	ld l, Entity_FieldsThatNeedInit
+	DEF START_Y = PLAYER_START_Y + 64.0q4
+	DEF START_X = PLAYER_START_X + 64.0q4
 	ld a, LOW(START_Y)
 	ld [hl+], a
 	ld a, HIGH(START_Y)

@@ -2,6 +2,12 @@ INCLUDE "hardware.inc"
 INCLUDE "structs.inc"
 INCLUDE "structs/entity.inc"
 
+; Used by xSetCameraPositionFromPlayer
+SECTION UNION "HRAM Temporary Variables", HRAM
+ 
+hApothemAsFixed:
+	ds 2
+
 SECTION "Camera Memory", WRAM0
 
 ; 2x unsigned 12.4
@@ -94,19 +100,36 @@ xSetCameraObjBoxPosition::
 	ret
 
 xSetCameraPositionFromPlayer::
-	; TODO: Replace the subtractions by 8 with subtraction by the width/height of the entity / 2
-	ld hl, wPlayer | Entity_PositionY
+	ld hl, wPlayer | Entity_Apothem
+	ld a, [hl]
+	swap a
+	and $F0
+	ldh [hApothemAsFixed], a
+	ld a, [hl]
+	swap a
+	and $0F
+	ldh [hApothemAsFixed + 1], a
+
+	ld l, Entity_PositionY
 	ld de, wCameraPosition
 
 	; y
-	; Low byte
+	; Low byte sub
 	ld a, [hl+]
-	sub LOW((SCRN_Y / 2 - 8) << 4)
+	sub LOW((SCRN_Y / 2) << 4)
+	ld c, a
+	; High byte sub
+	ld a, [hl+]
+	sbc HIGH((SCRN_Y / 2) << 4)
+	ld b, a
+	; Low byte add (8-bit integer to 12.4 fixed)
+	ldh a, [hApothemAsFixed]
+	add c
 	ld [de], a
 	inc de
-	; High byte
-	ld a, [hl+]
-	sub HIGH((SCRN_Y / 2 - 8) << 4)
+	; High byte add
+	ldh a, [hApothemAsFixed + 1]
+	adc b
 	ld [de], a
 	inc de
 
@@ -114,14 +137,23 @@ xSetCameraPositionFromPlayer::
 	ASSERT wCameraPosition.y + 2 == wCameraPosition.x
 
 	; x
-	; Low byte
+	; Low byte sub
+	ld l, Entity_PositionX
 	ld a, [hl+]
-	sub LOW((SCRN_X / 2 - 8) << 4)
+	sub LOW((SCRN_X / 2) << 4)
+	ld c, a
+	; High byte sub
+	ld a, [hl]
+	sbc HIGH((SCRN_X / 2) << 4)
+	ld b, a
+	; Low byte add
+	ldh a, [hApothemAsFixed]
+	add c
 	ld [de], a
 	inc de
-	; High byte
-	ld a, [hl]
-	sbc HIGH((SCRN_X / 2 - 8) << 4)
+	; High byte add
+	ldh a, [hApothemAsFixed + 1]
+	adc b
 	ld [de], a
 
 	ret

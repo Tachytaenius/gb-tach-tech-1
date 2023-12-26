@@ -8,6 +8,8 @@ DEF COPIED_ENTITY_TYPE_DATA_INC EQU 1
 	words 1, MaxSpeed
 	words 1, Acceleration
 
+	bytes 1, Apothem
+
 	end_struct
 
 ENDC

@@ -5,11 +5,23 @@ INCLUDE "constants/entities.inc"
 INCLUDE "constants/joypad.inc"
 INCLUDE "constants/directions.inc"
 
-; Used by ControlEntityMovement
-SECTION UNION "HRAM Temporary Variables", HRAM
+OPT Q8
 
-hCurPotentialDirection:
-	ds 1
+MACRO PROCESS_SINE_VARIABLE
+	DEF PROCESSED_SINE = SINE_TO_PROCESS
+	IF PROCESSED_SINE >= 1.0
+		DEF PROCESSED_SINE = %01111111 ; (8 bits) highest number without hitting sign bit (doesn't quite reach 1)
+	ELSE
+		IF PROCESSED_SINE < 0
+			DEF PROCESSED_SINE = PROCESSED_SINE | %100000000 ; (9 bits) set integer bit to 1
+		ELSE
+			DEF PROCESSED_SINE = PROCESSED_SINE & ~%100000000 ; (9 bits) zero integer bit
+		ENDC
+		; Integer bit is now the same as the sign
+		DEF PROCESSED_SINE = PROCESSED_SINE >> 1
+	ENDC
+	DEF PROCESSED_SINE = PROCESSED_SINE & %11111111 ; To stop it complaining about 8-bit
+ENDM
 
 SECTION "Entity Movement", ROMX
 
@@ -17,77 +29,54 @@ SECTION "Entity Movement", ROMX
 ; Param h: high byte of entity address
 ; Uses HRAM temporary variables
 xControlEntityMovement::
-	ld d, h
-	ld e, Entity_MaxSpeed
-	ld l, Entity_TargetVelocityY
-	; hl: pointer to target velocity, de: pointer to max speed
-
-	; We load potential new direction into [hCurPotentialDirection]
-
+	; We load pre-normalised velocity direction coords into d (y) and e (x), and potential new facing direction into b
+	ld de, 0
+	ld b, DIR_NONE
+	
 	; y
 	; Up
 	ldh a, [hJoypad.down]
 	and JOY_UP_MASK
 	jr z, .skipUp
-	call .getNegativeMaxSpeedInBc
-	ld a, DIR_UP
-	jr .setTargetVelocityYAndDirection
+	ld d, %10000000
+	ld b, DIR_UP
+	jr .skipY
 .skipUp
 	; Down
 	ldh a, [hJoypad.down]
 	and JOY_DOWN_MASK
-	jr z, .skipDown
-	call .getMaxSpeedInBc
-	ld a, DIR_DOWN
-	jr .setTargetVelocityYAndDirection
-.skipDown
-	xor a
-	ld c, a
-	ld b, a
-	ASSERT DIR_NONE == -1
-	cpl
-.setTargetVelocityYAndDirection
-	ldh [hCurPotentialDirection], a
-	ld a, c
-	ld [hl+], a
-	ld a, b
-	ld [hl+], a
+	jr z, .skipY
+	ld d, %01111111
+	ld b, DIR_DOWN
+.skipY
+	; d: pre-normalised direction y
+	; b: none, up, or down
 	
-	ASSERT Entity_TargetVelocityY + 2 == Entity_TargetVelocityX
-
 	; x
 	; Left
 	ldh a, [hJoypad.down]
 	and JOY_LEFT_MASK
 	jr z, .skipLeft
-	call .getNegativeMaxSpeedInBc
-	ld a, DIR_LEFT
-	jr .setTargetVelocityXAndDirection
+	ld e, %10000000
+	ld b, DIR_LEFT
+	jr .skipX
 .skipLeft
 	; Right
 	ldh a, [hJoypad.down]
 	and JOY_RIGHT_MASK
-	jr z, .skipRight
-	call .getMaxSpeedInBc
-	ld a, DIR_RIGHT
-	jr .setTargetVelocityXAndDirection
-.skipRight
-	xor a
-	ld c, a
-	ld b, a
-	ldh a, [hCurPotentialDirection]
-.setTargetVelocityXAndDirection
-	ldh [hCurPotentialDirection], a
-	ld a, c
-	ld [hl+], a
-	ld a, b
-	ld [hl+], a
+	jr z, .skipX
+	ld e, %01111111
+	ld b, DIR_RIGHT
+.skipX
+	; d: pre-normalised direction y
+	; e: pre-normalised direction x
+	; b: none, up, down, left, or right
 
 	; Handle direction
 	; Would be cool to have an option to prioritise new directions instead of old ones (TODO?)
-	ldh a, [hCurPotentialDirection]
+	ld a, b
 	cp DIR_NONE
-	ret z
+	jr z, .normaliseDe
 	ld l, Entity_Direction
 	ld a, [hl]
 	; Get direction as pad input
@@ -120,42 +109,103 @@ xControlEntityMovement::
 	ASSERT JOY_RIGHT_MASK | JOY_DOWN_MASK | JOY_LEFT_MASK | JOY_UP_MASK == %1111 
 	ldh a, [hJoypad.down] ; No need to filter this to the low nybble (joypad)
 	and c
-	ret nz ; Old direction still held, stick with it
-	ldh a, [hCurPotentialDirection]
+	jr nz, .normaliseDe ; Old direction still held, stick with it
+	ld a, b
 	ld [hl], a ; hl is still entity direction
 	; Set update sprite
 	ld l, Entity_Flags1
 	ld a, [hl]
 	or ENTITY_FLAGS1_UPDATE_GRAPHICS_MASK
 	ld [hl], a
-	ret
 
-.getNegativeMaxSpeedInBc
-	; de returns to its original value
-	; Two's complement [de] into bc
-	ld a, [de]
-	inc e ; We know e won't be 255 due to entity type data alignment
-	cpl
-	inc a
-	ld c, a
-	ld a, [de]
-	cpl
-	; If previous inc left a on zero then carry an inc
-	jr z, :+
-	inc a
+.normaliseDe
+	; Normalise?
+	ld a, e
+	and a
+	jr z, .setTargetVelocity
+	ld a, d
+	and a
+	jr z, .setTargetVelocity
+	; Normalise
+	rl d
+	; Negative
+	DEF SINE_TO_PROCESS = SIN(-0.125)
+	PROCESS_SINE_VARIABLE
+	ld d, PROCESSED_SINE
+	jr c, :+
+	; Positive
+	DEF SINE_TO_PROCESS = SIN(0.125)
+	PROCESS_SINE_VARIABLE
+	ld d, PROCESSED_SINE
 :
-	ld b, a
-	dec e
-	ret
+	rl e
+	; Negative
+	DEF SINE_TO_PROCESS = SIN(-0.125)
+	PROCESS_SINE_VARIABLE
+	ld e, PROCESSED_SINE
+	jr c, :+
+	; Positive
+	DEF SINE_TO_PROCESS = SIN(0.125)
+	PROCESS_SINE_VARIABLE
+	ld e, PROCESSED_SINE
+:
 
-.getMaxSpeedInBc
-	; de returns to its original value
-	ld a, [de]
-	inc e
+.setTargetVelocity
+	; Put d * max speed in target velocity y (as signed 3.12)
+	ld l, Entity_MaxSpeed
+	ld a, [hl+]
 	ld c, a
-	ld a, [de]
-	dec e
+	ld a, [hl]
 	ld b, a
+	push de
+	; Set de to [sign extension of d]d
+	ld e, d
+	rl d
+	sbc a ; a is -1 if carry, 0 if not
+	ld d, a
+	push hl
+	call MulBcUnsignedByDeSignedInDehlSigned ; dehl: 7 + 12 = 19 bits of precision. We need to right shift by 7 to get back to 12 bits of precision
+	; To do this, we just shift left by 1 and then shift right by 8
+	sla l
+	rl h
+	rl e
+	; rl d ; d is not used so doesn't need to be changed
+	; Now we use eh instead of at dehl
+	; Move it into ed to free up h
+	ld d, h
+	; ed: target velocity y
+	pop hl ; h as entity address high byte
+	ld l, Entity_TargetVelocityY
+	ld a, d
+	ld [hl+], a
+	ld a, e
+	ld [hl+], a
+	ASSERT Entity_TargetVelocityY + 2 == Entity_TargetVelocityX
+	pop de
+	push hl
+	
+	; Put e * max speed in target velocity x (as signed 3.12)
+	; bc is still max speed
+	; Set de to [sign extension of e]e
+	ld a, e
+	rla
+	sbc a ; a is -1 if carry, 0 if not
+	ld d, a
+	call MulBcUnsignedByDeSignedInDehlSigned ; dehl: 7 + 12 = 19 bits of precision. We need to right shift by 7 to get back to 12 bits of precision
+	; To do this, we just shift left by 1 and then shift right by 8
+	sla l
+	rl h
+	rl e
+	; rl d ; d is not used so doesn't need to be changed
+	; Now we use eh instead of at dehl
+	; Move it into ed to free up h
+	ld d, h
+	; ed: target velocity x
+	pop hl ; Target velocity x pointer
+	ld a, d
+	ld [hl+], a
+	ld [hl], e
+
 	ret
 
 ; Param h: High byte of entity address
@@ -222,6 +272,7 @@ xHandleEntityWalkAnimation::
 	ret
 
 ; Param h: High byte of entity to access (also expected to be in [hCurEntityAddressHigh])
+; Acceleration is not normalised/distributed properly between axes
 xAccelerateEntityToTargetVelocity::
 	ld l, Entity_VelocityY
 	ld d, h

@@ -1,7 +1,7 @@
 INCLUDE "structs.inc"
 INCLUDE "structs/entity.inc"
 INCLUDE "hardware.inc"
-INCLUDE "constants/directions.inc"
+INCLUDE "constants/misc.inc"
 INCLUDE "constants/entities.inc"
 INCLUDE "constants/entity_skin_metasprite_flags.inc"
 

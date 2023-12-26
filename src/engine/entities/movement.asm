@@ -3,7 +3,7 @@ INCLUDE "structs/entity.inc"
 INCLUDE "structs/entity_type.inc"
 INCLUDE "constants/entities.inc"
 INCLUDE "constants/joypad.inc"
-INCLUDE "constants/directions.inc"
+INCLUDE "constants/misc.inc"
 
 OPT Q8
 
@@ -31,7 +31,7 @@ SECTION "Entity Movement", ROMX
 xControlEntityMovement::
 	; We load pre-normalised velocity direction coords into d (y) and e (x), and potential new facing direction into b
 	ld de, 0
-	ld b, DIR_NONE
+	ld b, DIRECTION_NONE
 	
 	; y
 	; Up
@@ -39,7 +39,7 @@ xControlEntityMovement::
 	and JOY_UP_MASK
 	jr z, .skipUp
 	ld d, %10000000
-	ld b, DIR_UP
+	ld b, DIRECTION_UP
 	jr .skipY
 .skipUp
 	; Down
@@ -47,7 +47,7 @@ xControlEntityMovement::
 	and JOY_DOWN_MASK
 	jr z, .skipY
 	ld d, %01111111
-	ld b, DIR_DOWN
+	ld b, DIRECTION_DOWN
 .skipY
 	; d: pre-normalised direction y
 	; b: none, up, or down
@@ -58,7 +58,7 @@ xControlEntityMovement::
 	and JOY_LEFT_MASK
 	jr z, .skipLeft
 	ld e, %10000000
-	ld b, DIR_LEFT
+	ld b, DIRECTION_LEFT
 	jr .skipX
 .skipLeft
 	; Right
@@ -66,7 +66,7 @@ xControlEntityMovement::
 	and JOY_RIGHT_MASK
 	jr z, .skipX
 	ld e, %01111111
-	ld b, DIR_RIGHT
+	ld b, DIRECTION_RIGHT
 .skipX
 	; d: pre-normalised direction y
 	; e: pre-normalised direction x
@@ -75,32 +75,32 @@ xControlEntityMovement::
 	; Handle direction
 	; Would be cool to have an option to prioritise new directions instead of old ones (TODO?)
 	ld a, b
-	cp DIR_NONE
+	cp DIRECTION_NONE
 	jr z, .normaliseDe
 	ld l, Entity_Direction
 	ld a, [hl]
 	; Get direction as pad input
 	and a
 	jr nz, :+
-	ASSERT DIR_RIGHT == 0
+	ASSERT DIRECTION_RIGHT == 0
 	ld c, JOY_RIGHT_MASK
 	jr .doneDirectionToPad
 :
 	dec a
 	jr nz, :+
-	ASSERT DIR_DOWN == 1
+	ASSERT DIRECTION_DOWN == 1
 	ld c, JOY_DOWN_MASK
 	jr .doneDirectionToPad
 :
 	dec a
 	jr nz, :+
-	ASSERT DIR_LEFT == 2
+	ASSERT DIRECTION_LEFT == 2
 	ld c, JOY_LEFT_MASK
 	jr .doneDirectionToPad
 :
 	dec a
 	jr nz, :+
-	ASSERT DIR_UP == 3
+	ASSERT DIRECTION_UP == 3
 	ld c, JOY_UP_MASK
 	jr .doneDirectionToPad
 :

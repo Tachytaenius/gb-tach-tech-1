@@ -1,7 +1,7 @@
 INCLUDE "structs.inc"
 INCLUDE "structs/entity.inc"
 INCLUDE "constants/entities.inc"
-INCLUDE "constants/directions.inc"
+INCLUDE "constants/misc.inc"
 
 OPT Q8
 
@@ -506,19 +506,19 @@ xEntityFacePointRelative::
 	jr c, .xBigger
 
 	; y bigger
-	ld b, DIR_DOWN
+	ld b, DIRECTION_DOWN
 	ldh a, [hEntityCentreRelativeToFollowPointY + 2]
 	rla
 	jr nc, .setDirection
-	ld b, DIR_UP
+	ld b, DIRECTION_UP
 	jr .setDirection
 
 .xBigger
-	ld b, DIR_RIGHT
+	ld b, DIRECTION_RIGHT
 	ldh a, [hEntityCentreRelativeToFollowPointX + 2]
 	rla
 	jr nc, .setDirection
-	ld b, DIR_LEFT
+	ld b, DIRECTION_LEFT
 
 ; Expects b to be direction
 .setDirection

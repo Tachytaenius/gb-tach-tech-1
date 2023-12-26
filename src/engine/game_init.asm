@@ -1,7 +1,7 @@
 INCLUDE "structs.inc"
 INCLUDE "structs/entity.inc"
 INCLUDE "constants/entities.inc"
-INCLUDE "constants/directions.inc"
+INCLUDE "constants/misc.inc"
 INCLUDE "hardware.inc"
 INCLUDE "macros/bank.inc"
 
@@ -40,7 +40,7 @@ GameInit::
 	ld a, HIGH(START_X)
 	ld [hl+], a
 	ASSERT Entity_PositionX + 2 == Entity_Direction
-	ld a, DIR_DOWN
+	ld a, DIRECTION_DOWN
 	ld [hl+], a
 	ASSERT Entity_Direction + 1 == Entity_SkinId
 	ld a, ENTITY_SKIN_KNIGHT
@@ -61,7 +61,7 @@ GameInit::
 	ld [hl+], a
 	ld a, HIGH(START_X)
 	ld [hl+], a
-	ld a, DIR_DOWN
+	ld a, DIRECTION_DOWN
 	ld [hl+], a
 	ld a, ENTITY_SKIN_ANCIENT_KNIGHT
 	ld [hl+], a
@@ -80,7 +80,7 @@ GameInit::
 	ld [hl+], a
 	ld a, HIGH(START_X)
 	ld [hl+], a
-	ld a, DIR_DOWN
+	ld a, DIRECTION_DOWN
 	ld [hl+], a
 	ld a, ENTITY_SKIN_ANCIENT_KNIGHT
 	ld [hl+], a
@@ -99,7 +99,7 @@ GameInit::
 	ld [hl+], a
 	ld a, HIGH(START_X)
 	ld [hl+], a
-	ld a, DIR_DOWN
+	ld a, DIRECTION_DOWN
 	ld [hl+], a
 	ld a, ENTITY_SKIN_ANCIENT_KNIGHT
 	ld [hl+], a
@@ -118,7 +118,7 @@ GameInit::
 	ld [hl+], a
 	ld a, HIGH(START_X)
 	ld [hl+], a
-	ld a, DIR_DOWN
+	ld a, DIRECTION_DOWN
 	ld [hl+], a
 	ld a, ENTITY_SKIN_ANCIENT_KNIGHT
 	ld [hl+], a

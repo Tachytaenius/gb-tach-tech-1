@@ -113,20 +113,6 @@ ProcessEntityUpdateLogic::
 	ld h, HIGH(wPlayer)
 	bankcall_no_pop xControlEntityMovement
 
-	; TEMP
-	ld h, HIGH(wEntity1)
-	ld d, HIGH(wPlayer)
-	bankcall_no_pop xFollowEntity
-	ld h, HIGH(wEntity2)
-	ld d, HIGH(wPlayer)
-	bankcall_no_pop xFollowEntity
-	ld h, HIGH(wEntity3)
-	ld d, HIGH(wPlayer)
-	bankcall_no_pop xFollowEntity
-	ld h, HIGH(wEntity4)
-	ld d, HIGH(wPlayer)
-	bankcall_no_pop xFollowEntity
-
 	ld a, HIGH(wEntity0)
 	ldh [hCurEntityAddressHigh], a
 	ld h, a

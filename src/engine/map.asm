@@ -143,7 +143,6 @@ UpdateMap::
 
 	; Changed tile on the y, we need to write a row
 	; Up or down?
-	; TODO: "Redraw" variable/function, which forces a full redraw of the map regardless of direction. 
 	; If not redrawing, a speed of change no greater than 1 tile is expected.
 	; Expecting a speed of change no greater than 1 tile but observing a leap of high byte from FF to 00 or vice versa implies overflow/underflow, which means invert whether it's up or down from the 16-bit comparison.
 	inc de
